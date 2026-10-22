@@ -1,4 +1,4 @@
-"""Clean the processed"""
+
 
 import json
 import os
@@ -10,7 +10,7 @@ from datetime import datetime
 def clean_processed_json_data(data: Dict[str, Any], fields_to_remove: List[str],
                              sections_to_remove: Optional[List[str]] = None,
                              figure_fields_to_remove: Optional[List[str]] = None) -> Dict[str, Any]:
-    """Clean processed"""
+
     cleaned_data = data.copy()
 
     for field in fields_to_remove:
@@ -51,7 +51,7 @@ def clean_single_json_file(input_file: Union[str, Path],
                           fields_to_remove: Optional[List[str]] = None,
                           sections_to_remove: Optional[List[str]] = None,
                           figure_fields_to_remove: Optional[List[str]] = None) -> bool:
-    """Clean a single processed"""
+
     input_path = Path(input_file)
 
     if not input_path.exists():
@@ -90,7 +90,7 @@ def clean_json_directory(input_dir: Union[str, Path],
                         fields_to_remove: Optional[List[str]] = None,
                         sections_to_remove: Optional[List[str]] = None,
                         figure_fields_to_remove: Optional[List[str]] = None) -> int:
-    """Clean all JSON files in a directory and its subdirectories"""
+
     input_path = Path(input_dir)
 
     if not input_path.exists():
@@ -130,7 +130,7 @@ def clean_json_data(input_path: Union[str, Path],
                    sections_to_remove: Optional[List[str]] = None,
                    figure_fields_to_remove: Optional[List[str]] = None,
                    paper_filter_file: Optional[Union[str, Path]] = None) -> List[Dict[str, Any]]:
-    """Clean JSON data and return list of cleaned data dictionaries for pipeline use"""
+
     if not fields_to_remove:
         raise ValueError("fields_to_remove must be provided and cannot be empty. Please specify json_fields_to_remove in your config file.")
     input_path = Path(input_path)
@@ -249,7 +249,7 @@ def clean_json_data(input_path: Union[str, Path],
 def save_cleaned_json_data(cleaned_data: List[Dict[str, Any]], 
                           output_dir: Union[str, Path],
                           file_prefix: str = "cleaned") -> List[Path]:
-    """Save cleaned JSON data to files"""
+
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     

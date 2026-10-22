@@ -1,18 +1,18 @@
 #!/usr/bin/env python3
-"""CLI script for running the Batch Active Prompting Pipeline"""
+
 
 import argparse
 import sys
 from pathlib import Path
 from datetime import datetime
 
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from tpd_curator.capo import Capo, PipelinePausedException
 
 
 class TeeLogger:
-    """A logger that writes to both stdout/stderr and a file simultaneously"""
+
     def __init__(self, file_path, stream):
         self.file = open(file_path, 'a', encoding='utf-8')
         self.stream = stream
@@ -37,25 +37,25 @@ def main():
         epilog="""
 Examples:
   # Basic usage with default settings (batch_size=6, thresholds=0.9)
-  python scripts/run_capo.py \\
+  python scripts/prompt_optimization/run_capo.py \\
     --config_path tpd_curator/config/config_api_local_0908.yaml \\
     --input_prompt prompts/simple_initial_prompt.md
 
   # Custom batch size
-  python scripts/run_capo.py \\
+  python scripts/prompt_optimization/run_capo.py \\
     --config_path tpd_curator/config/config_api_local_0908.yaml \\
     --input_prompt prompts/simple_initial_prompt.md \\
     --batch_size 10
 
   # Custom thresholds (lower than default 0.9)
-  python scripts/run_capo.py \\
+  python scripts/prompt_optimization/run_capo.py \\
     --config_path tpd_curator/config/config_api_local_0908.yaml \\
     --input_prompt prompts/simple_initial_prompt.md \\
     --precision_threshold 0.85 \\
     --recall_threshold 0.85
 
   # Full customization
-  python scripts/run_capo.py \\
+  python scripts/prompt_optimization/run_capo.py \\
     --config_path tpd_curator/config/config_api_local_0908.yaml \\
     --input_prompt prompts/simple_initial_prompt.md \\
     --batch_size 8 \\
@@ -63,20 +63,20 @@ Examples:
     --recall_threshold 0.92
 
   # Pause after each paper for manual review
-  python scripts/run_capo.py \\
+  python scripts/prompt_optimization/run_capo.py \\
     --config_path tpd_curator/config/config_api_local_0908.yaml \\
     --input_prompt prompts/simple_initial_prompt.md \\
     --pause-after-extraction
 
   # Resume after fixing semantic cache (normal resume - continues to next paper)
-  python scripts/run_capo.py \\
+  python scripts/prompt_optimization/run_capo.py \\
     --config_path tpd_curator/config/config_api_local_0908.yaml \\
     --input_prompt prompts/simple_initial_prompt.md \\
     --pause-after-extraction \\
     --resume
 
   # Verify semantic cache corrections (re-evaluate and pause again)
-  python scripts/run_capo.py \\
+  python scripts/prompt_optimization/run_capo.py \\
     --config_path tpd_curator/config/config_api_local_0908.yaml \\
     --input_prompt prompts/simple_initial_prompt.md \\
     --pause-after-extraction \\

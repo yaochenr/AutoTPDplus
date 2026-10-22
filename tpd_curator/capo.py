@@ -1,4 +1,4 @@
-"""Batch Active Prompting Pipeline"""
+
 
 import json
 import yaml
@@ -24,7 +24,7 @@ from .utils.pause_manager import (
 
 
 class PipelinePausedException(Exception):
-    """Raised when pipeline is paused for manual cache review"""
+
     def __init__(self, message, round_num, round_dir, aggregate_metrics):
         super().__init__(message)
         self.round_num = round_num
@@ -33,7 +33,7 @@ class PipelinePausedException(Exception):
 
 
 class Capo:
-    """Pipeline for batch active prompting with aggregate evaluation"""
+
 
     def __init__(
         self,
@@ -48,7 +48,7 @@ class Capo:
         experiment_dir_to_resume: Optional[str] = None,
         verify_only: bool = False,
     ):
-        """Initialize the Batch Active Prompting Pipeline"""
+
         self.config_path = Path(config_path)
         self.config = self._load_config()
 
@@ -123,13 +123,13 @@ class Capo:
         print(f"{'='*80}\n")
 
     def _load_config(self) -> Dict[str, Any]:
-        """Load configuration from YAML file"""
+
         with open(self.config_path, "r", encoding="utf-8") as f:
             config = yaml.safe_load(f)
         return config
 
     def _get_ground_truth_paper_list(self) -> List[Dict[str, str]]:
-        """Get list of ground truth papers from config"""
+
         filter_file = self.config["data"].get("paper_filter_file")
         if filter_file and Path(filter_file).exists():
             with open(filter_file, "r", encoding="utf-8") as f:
@@ -145,7 +145,7 @@ class Capo:
         return [{"doi": doi, "pmc_id": None} for doi in unique_dois]
 
     def run_batch_round(self, round_num: int = 1) -> Dict[str, Any]:
-        """Run one round of batch active prompting"""
+
         expected_prompt_version = round_num - 1
         prompt_file = self.experiment_dir / f"{expected_prompt_version:02d}_prompt.md"
 
@@ -488,7 +488,7 @@ class Capo:
         output_dir: Path,
         round_dir: Path,
     ) -> Dict[str, Any]:
-        """Extract data from a single paper and evaluate"""
+
         safe_doi = doi.replace("/", "_").replace(":", "_")
         paper_dir = output_dir / f"paper_{safe_doi}"
         paper_dir.mkdir(parents=True, exist_ok=True)
@@ -601,7 +601,7 @@ class Capo:
         paper_dir: Path,
         doi: str
     ) -> Dict:
-        """Re-run evaluation for a paper (used when resuming with updated cache)"""
+
         print(f"  Re-evaluating paper: {doi}")
 
         processed_csv_path = paper_dir / "data_processed.csv"
@@ -648,7 +648,7 @@ class Capo:
         evaluation_results: Dict,
         doi: str
     ) -> Dict[str, float]:
-        """Extract metrics dict from evaluation results"""
+
         part1_record_level = evaluation_results.get("part1_record_level", {})
         part2_entry_level = evaluation_results.get("part2_entry_level", {})
 
@@ -680,7 +680,7 @@ class Capo:
         self,
         paper_results: Dict[str, Dict[str, Any]]
     ) -> Dict[str, Any]:
-        """Calculate aggregate metrics across all papers in the batch"""
+
         valid_results = {
             doi: result for doi, result in paper_results.items()
             if result["status"] == "completed"
@@ -735,7 +735,7 @@ class Capo:
         self,
         aggregate_metrics: Dict[str, Any]
     ) -> Dict[str, Any]:
-        """Check if batch meets acceptance criteria"""
+
         failing_metrics = []
 
         if aggregate_metrics["avg_part1_precision"] < self.precision_threshold:
@@ -774,7 +774,7 @@ class Capo:
         round_num: int,
         timestamp: str,
     ):
-        """Save all round results to files"""
+
         aggregate_path = round_dir / "aggregate_metrics.json"
         with open(aggregate_path, "w", encoding="utf-8") as f:
             json.dump(aggregate_metrics, f, indent=2, ensure_ascii=False)
@@ -795,7 +795,7 @@ class Capo:
 
 
     def _get_paper_main_text(self, pmc_id: str, clean_json_dir: Optional[str] = None) -> str:
-        """Get paper main text (reuse Round 1 input logic)"""
+
         if clean_json_dir:
             json_file_dir = Path(clean_json_dir)
         else:
@@ -836,7 +836,7 @@ class Capo:
         doi: str,
         output_dir: Path
     ) -> str:
-        """Create filtered labeled data CSV containing only the specified DOI"""
+
         labeled_data_path = self.config["evaluation"]["labeled_data_path"]
 
         try:
@@ -859,7 +859,7 @@ class Capo:
             return labeled_data_path
 
     def _load_ground_truth_for_doi(self, doi: str) -> List[Dict]:
-        """Load ALL ground truth records for a specific DOI"""
+
         labeled_data_path = self.config["evaluation"]["labeled_data_path"]
 
         try:
@@ -882,7 +882,7 @@ class Capo:
         doi: str,
         detailed_evaluation: Dict
     ) -> List[Dict]:
-        """Add 'evaluation_label' field (TP/FP) to each prediction record"""
+
         if not detailed_evaluation or str(doi) not in detailed_evaluation:
             for pred in predictions:
                 pred['evaluation_label'] = 'unknown'
@@ -977,7 +977,7 @@ class Capo:
         field_level_data: List[Dict],
         doi: str
     ) -> Optional[Dict]:
-        """Find matching field-level evaluation record for a prediction"""
+
         pred_compound = str(prediction.get('Compound_Name', '')).strip() if pd.notna(prediction.get('Compound_Name')) else ''
 
         if not pred_compound:
@@ -1023,7 +1023,7 @@ class Capo:
         prediction: Dict,
         field_level_record: Dict
     ) -> Dict:
-        """Add field-level evaluation labels to prediction record"""
+
         evaluated_fields = ['DC50', 'DC50_units', 'DC50_h', 'Dmax', 'Dmax_h', 'Dmax_conc']
 
         fields_data = field_level_record.get('fields', {})
@@ -1050,7 +1050,7 @@ class Capo:
         ground_truth_list: List[Dict],
         key_fields: List[str]
     ) -> Optional[Dict]:
-        """Find matching ground truth record by key fields"""
+
         field_mapping = {
             'label_compound': 'Compound_Name',
             'label_target': 'Degradation_Target',
@@ -1082,7 +1082,7 @@ class Capo:
         predictions_list: List[Dict],
         key_fields: List[str]
     ) -> Optional[Dict]:
-        """Find matching prediction record by key fields"""
+
         field_mapping = {
             'pred_compound': 'Compound_Name',
             'pred_target': 'Degradation_Target',
@@ -1113,7 +1113,7 @@ class Capo:
         compound_name: str,
         ground_truth_list: List[Dict]
     ) -> Optional[Dict]:
-        """Find ground truth record by compound name"""
+
         compound_lower = compound_name.strip().lower()
 
         for gt in ground_truth_list:
@@ -1128,7 +1128,7 @@ class Capo:
         compound_name: str,
         predictions_list: List[Dict]
     ) -> Optional[Dict]:
-        """Find prediction record by compound name"""
+
         compound_lower = compound_name.strip().lower()
 
         for pred in predictions_list:
@@ -1145,7 +1145,7 @@ class Capo:
         all_ground_truth: List[Dict],
         all_predictions: List[Dict]
     ) -> Dict[str, Any]:
-        """Classify errors into 2 groups based on evaluation results"""
+
         doi_eval = detailed_evaluation.get(str(doi), {})
         part1 = doi_eval.get('part1_record_level', {})
         part2 = doi_eval.get('part2_field_level', {})
@@ -1301,7 +1301,7 @@ class Capo:
         all_ground_truth: List[Dict],
         semantic_matches: List[Dict] = None
     ) -> str:
-        """Build error analysis prompt with classified error groups"""
+
         group1 = classified_errors['group1_record_level_omissions']
         group2 = classified_errors['group2_unmatched_extra_data']
 
@@ -1439,7 +1439,7 @@ Accoding to above information, analyze the root causes of the errors. Summarize 
         metrics: Dict[str, float],
         clean_json_dir: Optional[str] = None
     ) -> str:
-        """Analyze extraction errors for a single paper"""
+
         print(f"  Analyzing errors for {doi}...")
 
         if not pmc_id:
@@ -1546,7 +1546,7 @@ Accoding to above information, analyze the root causes of the errors. Summarize 
         round_dir: Path,
         aggregate_metrics: Dict[str, Any]
     ):
-        """Run error analysis for all papers in rejected batch"""
+
         print(f"\n{'='*80}")
         print("Running Error Analysis for Rejected Batch")
         print(f"{'='*80}\n")
@@ -1617,7 +1617,7 @@ Accoding to above information, analyze the root causes of the errors. Summarize 
         recall_threshold: float,
         aggregate_metrics: Dict[str, Any]
     ):
-        """Save error analysis summary report for all papers"""
+
         summary_lines = [
             "# Error Analysis Summary\n",
             f"\n**Paper Status**: REJECTED",
@@ -1654,7 +1654,7 @@ Accoding to above information, analyze the root causes of the errors. Summarize 
 
 
     def _calculate_diff_char_count(self, old_text: str, new_text: str) -> int:
-        """Calculate the number of characters changed between two texts"""
+
         import difflib
 
         diff = difflib.unified_diff(
@@ -1680,7 +1680,7 @@ Accoding to above information, analyze the root causes of the errors. Summarize 
         round_dir: Path,
         aggregate_metrics: Dict[str, Any]
     ) -> bool:
-        """Update prompt based on batch error analysis"""
+
         print(f"\n{'='*80}")
         print("Updating Prompt Based on Batch Error Analysis")
         print(f"{'='*80}\n")

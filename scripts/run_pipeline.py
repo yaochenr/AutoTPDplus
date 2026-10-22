@@ -9,7 +9,7 @@ from tpd_curator.pipeline import *
 
 
 class TeeLogger:
-    """A class that writes to both file and stdout/stderr"""
+
     def __init__(self, log_file, stream):
         self.log_file = log_file
         self.stream = stream
@@ -25,7 +25,7 @@ class TeeLogger:
 
 
 def setup_logging(results_dir: Path):
-    """Setup logging to write to both console and log file in results directory"""
+
     log_file_path = results_dir / "pipeline_run.log"
 
     log_file = open(log_file_path, 'w', encoding='utf-8', buffering=1)
@@ -74,7 +74,7 @@ def main(args):
                 print(f"Data cleaning failed: {str(e)}")
                 import traceback
                 traceback.print_exc()
-                return
+                return 1
         else:
             print("Skip data cleaning step.")
 
@@ -85,7 +85,7 @@ def main(args):
             prompt_path = Path(args.input_prompt)
             if not prompt_path.exists():
                 print(f"Error: The specified markdown file does not exist - {args.input_prompt}")
-                return
+                return 1
             with open(prompt_path, "r", encoding="utf-8") as f:
                 input_prompt_content = f.read()
         else:
@@ -103,7 +103,7 @@ def main(args):
                 print(f"Reasoning failed: {str(e)}")
                 import traceback
                 traceback.print_exc()
-                return
+                return 1
         else:
             print("Skip LLM reasoning step.")
 
@@ -115,7 +115,7 @@ def main(args):
                 print(f"Save CSV failed: {str(e)}")
                 import traceback
                 traceback.print_exc()
-                return
+                return 1
         else:
             print("Skip saving LLM output to CSV file.")
 
@@ -263,4 +263,4 @@ if __name__ == '__main__':
         print(f"Error: The specified configuration file does not exist - {args.config_path}")
         exit(1)
 
-    main(args)
+    sys.exit(main(args) or 0)

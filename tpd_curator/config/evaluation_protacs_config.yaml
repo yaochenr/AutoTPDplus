@@ -12,6 +12,4 @@ results:
 
 evaluation:
   labeled_data_path: /Users/yaochenr/project/data/clean_data_csv/26-04-24-PROTAC-GT-Processed.csv
-  # cache_file_path: /Users/yaochenr/project/tpd_curator/semantic_cache/llm_gt_match_protacs.json # llm vs. gt
-  # cache_file_path: /Users/yaochenr/project/tpd_curator/semantic_cache/baseline_gt_match_protacs.json # baseline vs. gt
-  cache_file_path: /Users/yaochenr/project/tpd_curator/semantic_cache/llm_baseline_match_protacs.json # llm vs. baseline
+  cache_file_path: /Users/yaochenr/project/tpd_curator/semantic_cache/llm_baseline_match_protacs.json

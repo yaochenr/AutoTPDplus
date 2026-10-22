@@ -1,20 +1,20 @@
-"""GEPA adapter for the TPD extraction prompt.
 
-Wraps the existing CAPO/extraction machinery so that GEPA
-(https://github.com/gepa-ai/gepa) can evolve the extraction prompt using the
-same per-paper rollout + rich FP/FN error feedback that CAPO already produces.
 
-Conceptual mapping:
-  - GEPA "candidate"  -> the editable sections of the extraction prompt
-  - GEPA "data inst"  -> one paper: {"doi": ..., "pmc_id": ...}
-  - GEPA rollout      -> Capo._extract_paper(...) -> precision/recall metrics
-  - GEPA reflective feedback (ASI) -> Capo._classify_errors_by_type(...) rendered
-    as the FN (missed) / FP (extra) records with their reasons.
 
-Only the ``# Goal`` and ``# Extraction Principles`` sections are exposed as GEPA
-components; ``# Required Fields`` and ``# Output Format`` stay frozen so the JSON
-schema (and therefore evaluation parsing) cannot drift.
-"""
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import json
 import hashlib
@@ -26,28 +26,29 @@ from typing import Any, Dict, List, Mapping, Optional, Sequence
 import pandas as pd
 
 try:
-    # EvaluationBatch is a lightweight dataclass; importing it keeps us aligned
-    # with GEPA's expected return type. The adapter is duck-typed (GEPAAdapter is
-    # a Protocol), so we don't need to subclass it.
+
+
+
     from gepa.core.adapter import EvaluationBatch
-except Exception:  # pragma: no cover - allows import without gepa installed
+except Exception:
     EvaluationBatch = None
 
 
-# Sections GEPA is allowed to rewrite. Everything else stays frozen.
+
 EDITABLE_SECTIONS = ("Goal", "Extraction Principles")
 
-# Pause/resume rendezvous file names (inside the pause_dir).
-PAUSE_MARKER = "PAUSE.json"       # written by adapter when paused
-PAUSE_REVIEW = "REVIEW.md"        # human-readable list of new judgments
-CONTINUE_SIGNAL = "CONTINUE"      # written by gepa_continue.py to resume
+
+PAUSE_MARKER = "PAUSE.json"
+PAUSE_REVIEW = "REVIEW.md"
+CONTINUE_SIGNAL = "CONTINUE"
 
 
 def cache_index(cache_file) -> Dict:
-    """Index a semantic-match cache file as {(doi, feature, pred, label): result}.
 
-    Shared by the pause diff (adapter) and scripts/curate_semantic_cache.py.
-    """
+
+
+
+
     p = Path(cache_file)
     if not p.exists():
         return {}
@@ -66,16 +67,16 @@ def cache_index(cache_file) -> Dict:
     return idx
 
 
-# ---------------------------------------------------------------------------
-# Prompt <-> candidate (section) conversion
-# ---------------------------------------------------------------------------
+
+
+
 
 def parse_prompt_sections(prompt_text: str) -> List[Dict[str, str]]:
-    """Split a prompt into ordered top-level (``# Header``) sections.
 
-    Returns a list of {"name", "header_line", "body"} preserving original order.
-    Any preamble before the first header is stored with name "" (always frozen).
-    """
+
+
+
+
     lines = prompt_text.splitlines(keepends=True)
     sections: List[Dict[str, str]] = []
     current = {"name": "", "header_line": "", "body": ""}
@@ -95,12 +96,12 @@ def parse_prompt_sections(prompt_text: str) -> List[Dict[str, str]]:
 
 
 def prompt_to_candidate(prompt_text: str) -> Dict[str, str]:
-    """Extract the editable section bodies as a GEPA candidate dict."""
+
     candidate: Dict[str, str] = {}
     for sec in parse_prompt_sections(prompt_text):
         if sec["name"] in EDITABLE_SECTIONS:
-            # Keep the original body verbatim (an empty section stays empty).
-            # GEPA happily evolves from an empty instruction via reflection.
+
+
             candidate[sec["name"]] = sec["body"].strip("\n")
     if not candidate:
         raise ValueError(
@@ -111,27 +112,27 @@ def prompt_to_candidate(prompt_text: str) -> Dict[str, str]:
 
 
 def candidate_to_prompt(candidate: Dict[str, str], template_prompt: str) -> str:
-    """Rebuild the full prompt, substituting editable bodies from ``candidate``.
 
-    Frozen sections (anything not in ``candidate``) are copied verbatim from
-    ``template_prompt``, and original section order is preserved.
-    """
+
+
+
+
     out: List[str] = []
     for sec in parse_prompt_sections(template_prompt):
         out.append(sec["header_line"])
         if sec["name"] in candidate:
             body = candidate[sec["name"]].strip("\n")
-            # Editable body followed by one blank line for readability; an empty
-            # section becomes just the header + a blank line.
+
+
             out.append((body + "\n\n") if body else "\n")
         else:
             out.append(sec["body"])
     return "".join(out)
 
 
-# ---------------------------------------------------------------------------
-# Feedback rendering (Actionable Side Information for GEPA reflection)
-# ---------------------------------------------------------------------------
+
+
+
 
 _GT_KEY_FIELDS = (
     "Compound_Name", "Degradation_Target", "Recruiter", "Assay", "Cell_Line",
@@ -149,11 +150,11 @@ def build_paper_feedback(
     paper_dir: Any,
     metrics: Dict[str, float],
 ) -> str:
-    """Render compact, structured FP/FN feedback for one paper.
 
-    Reuses Capo's error classification but omits the full paper text so the
-    feedback stays small enough for GEPA's reflection minibatches.
-    """
+
+
+
+
     paper_dir = Path(paper_dir)
     all_ground_truth = capo._load_ground_truth_for_doi(doi)
 
@@ -227,12 +228,12 @@ def build_paper_feedback(
     return "\n".join(parts)
 
 
-# ---------------------------------------------------------------------------
-# The adapter
-# ---------------------------------------------------------------------------
+
+
+
 
 class _EvalBatchFallback:
-    """Mimics gepa.core.adapter.EvaluationBatch when gepa is not importable."""
+
 
     def __init__(self, outputs, scores, trajectories):
         self.outputs = outputs
@@ -243,11 +244,11 @@ class _EvalBatchFallback:
 
 
 class TpdExtractionAdapter:
-    """GEPA adapter driving the TPD extraction + evaluation pipeline."""
 
-    # GEPA's reflective-mutation proposer checks `adapter.propose_new_texts`.
-    # Leaving it None makes GEPA use its built-in proposer, which mutates the
-    # prompt via `reflection_lm` + our `make_reflective_dataset` feedback.
+
+
+
+
     propose_new_texts = None
 
     def __init__(self, capo, template_prompt: str, work_dir: Any,
@@ -258,15 +259,15 @@ class TpdExtractionAdapter:
         self.template_prompt = template_prompt
         self.work_dir = Path(work_dir)
         self.work_dir.mkdir(parents=True, exist_ok=True)
-        # Cache: (candidate_hash, doi) -> rollout result. Avoids recomputing an
-        # identical (prompt, paper) rollout (e.g. Pareto re-evaluation on val).
+
+
         self._cache: Dict[str, Dict[str, Any]] = {}
 
-        # --- Human-in-the-loop pause on new semantic-cache judgments ---
-        # When enabled, evaluate() pauses whenever an evaluation produced NEW
-        # (uncurated) semantic-match entries, so the human can review/correct the
-        # shared cache before the (corrected) score is returned to GEPA. Same
-        # matching criteria as CAPO; only the timing of human review is added.
+
+
+
+
+
         self.pause_on_new_matches = pause_on_new_matches
         self.pause_dir = Path(pause_dir) if pause_dir else (self.work_dir / ".gepa_pause")
         self.pause_context = pause_context or {}
@@ -296,16 +297,16 @@ class TpdExtractionAdapter:
         out_dir = self.work_dir / chash
         out_dir.mkdir(parents=True, exist_ok=True)
 
-        # --- Isolate this rollout from every other one in the process ---
-        # 1) clean_json_data names its output dir by minute, and run_llm_pipeline
-        #    extracts EVERY json in clean_json_dir; without a per-rollout
-        #    output_dir, papers cleaned in the same minute would share a dir and
-        #    contaminate each other's extraction. Give each (candidate, paper)
-        #    its own output_dir so its clean dir is always unique.
+
+
+
+
+
+
         safe_doi = doi.replace("/", "_").replace(":", "_")
         self.capo.config["data"]["output_dir"] = str(out_dir / f"clean_{safe_doi}")
-        # 2) Conversation history is a module-global keyed only by PMC id; clear
-        #    it so re-extracting a paper under a new prompt starts fresh.
+
+
         try:
             from tpd_curator import pipeline as _pipeline
             _pipeline.store.clear()
@@ -333,10 +334,10 @@ class TpdExtractionAdapter:
         zero = {k: 0.0 for k in (
             "part1_precision", "part1_recall", "part2_precision", "part2_recall")}
 
-        # Snapshot the semantic cache so we can detect judgments made THIS call.
+
         cache_before = cache_index(self.cache_file) if self.pause_on_new_matches else {}
 
-        results: List[Dict[str, Any]] = []   # per-paper: {doi, metrics, paper_dir, error, result?}
+        results: List[Dict[str, Any]] = []
         for inst in batch:
             doi = inst["doi"]
             pmc_id = inst.get("pmc_id")
@@ -345,13 +346,13 @@ class TpdExtractionAdapter:
                 results.append({"doi": doi, "metrics": result["metrics"],
                                 "paper_dir": result.get("paper_dir", ""),
                                 "error": None, "result": result})
-            except Exception as e:  # a failed paper scores 0 without crashing GEPA
+            except Exception as e:
                 results.append({"doi": doi, "metrics": dict(zero),
                                 "paper_dir": "", "error": str(e), "result": None})
 
-        # Human-in-the-loop: if this evaluation produced new semantic-match
-        # judgments, pause for review, then re-evaluate with the corrected cache
-        # before returning scores to GEPA.
+
+
+
         if self.pause_on_new_matches:
             new_entries = self._new_cache_entries(cache_before)
             if new_entries:
@@ -374,11 +375,11 @@ class TpdExtractionAdapter:
                                    trajectories=trajectories)
         return _EvalBatchFallback(outputs, scores, trajectories)
 
-    # ------------------------------------------------------------------
-    # Pause / review / resume
-    # ------------------------------------------------------------------
+
+
+
     def _new_cache_entries(self, cache_before: Dict) -> List[Dict[str, Any]]:
-        """Entries the semantic judge wrote/changed since cache_before."""
+
         after = cache_index(self.cache_file)
         out = []
         for (doi, feat, pred, lab), res in after.items():
@@ -398,8 +399,8 @@ class TpdExtractionAdapter:
                  "'no' fails the whole record. Fix wrong `result` values in the cache:",
                  f"\n    {self.cache_file}\n",
                  "\nThen, in another terminal:",
-                 "\n    pixi run python scripts/gepa_continue.py --verify   # re-eval + show scores, stay paused",
-                 "\n    pixi run python scripts/gepa_continue.py             # re-eval + continue GEPA\n",
+                 "\n    pixi run python scripts/prompt_optimization/gepa_continue.py --verify",
+                 "\n    pixi run python scripts/prompt_optimization/gepa_continue.py\n",
                  "\n## Current (uncurated) per-paper scores\n"]
         for r in results:
             m = r["metrics"]
@@ -415,7 +416,7 @@ class TpdExtractionAdapter:
 
     def _pause_for_review(self, new_entries, results):
         self.pause_dir.mkdir(parents=True, exist_ok=True)
-        # Clear any stale continue signal from a previous pause.
+
         sig = self.pause_dir / CONTINUE_SIGNAL
         if sig.exists():
             sig.unlink()
@@ -427,7 +428,7 @@ class TpdExtractionAdapter:
             "cache_file": str(self.cache_file),
             "papers": papers,
             "num_new_entries": len(new_entries),
-            **self.pause_context,   # config_path, gt_csv, seed_prompt for gepa_continue
+            **self.pause_context,
         }
         (self.pause_dir / PAUSE_MARKER).write_text(
             json.dumps(marker, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -439,14 +440,14 @@ class TpdExtractionAdapter:
         print(f"Review file : {self.pause_dir / PAUSE_REVIEW}")
         print(f"Cache file  : {self.cache_file}")
         print("In another terminal:")
-        print("  pixi run python scripts/gepa_continue.py --verify   # re-eval + show scores")
-        print("  pixi run python scripts/gepa_continue.py             # re-eval + continue")
+        print("  pixi run python scripts/prompt_optimization/gepa_continue.py --verify")
+        print("  pixi run python scripts/prompt_optimization/gepa_continue.py")
         print("=" * 80, flush=True)
 
-        # Block until gepa_continue.py drops the CONTINUE signal.
+
         while not sig.exists():
             time.sleep(self.poll_interval)
-        # Consume the signal + clear markers.
+
         sig.unlink()
         for fn in (PAUSE_MARKER, PAUSE_REVIEW):
             fp = self.pause_dir / fn
@@ -455,8 +456,8 @@ class TpdExtractionAdapter:
         print("▶  Resuming GEPA with corrected cache ...", flush=True)
 
     def _reevaluate_after_review(self, results):
-        """Re-run evaluation (no re-extraction) for each paper so the score
-        returned to GEPA reflects the human-corrected cache."""
+
+
         for r in results:
             if not r["paper_dir"] or r["error"]:
                 continue
@@ -464,7 +465,7 @@ class TpdExtractionAdapter:
                 ev = self.capo._re_evaluate_paper(paper_dir=Path(r["paper_dir"]), doi=r["doi"])
                 metrics = self.capo._extract_metrics_from_evaluation(ev, r["doi"])
                 r["metrics"] = metrics
-                if r.get("result") is not None:   # keep the (cached) rollout in sync
+                if r.get("result") is not None:
                     r["result"]["metrics"] = metrics
             except Exception as e:
                 print(f"  [re-eval] {r['doi']} failed: {e}")
@@ -496,5 +497,5 @@ class TpdExtractionAdapter:
                 "Feedback": feedback,
             })
 
-        # The same error signal is relevant to every editable component.
+
         return {comp: records for comp in components_to_update}

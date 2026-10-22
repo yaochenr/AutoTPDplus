@@ -1,4 +1,4 @@
-"""Pause/Resume state management for the active prompting pipeline"""
+
 
 import json
 import os
@@ -9,7 +9,7 @@ from pathlib import Path
 
 @dataclass
 class PauseState:
-    """State information needed to resume a paused pipeline execution"""
+
     paper_doi: str
     round: int
     results_dir: str
@@ -32,7 +32,7 @@ class PauseState:
 
 
 class PauseManager:
-    """Manages pause/resume state for the pipeline"""
+
 
     PAUSE_STATE_FILENAME = "pause_state.json"
 

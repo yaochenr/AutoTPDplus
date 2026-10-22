@@ -105,7 +105,7 @@ def run_llm_api(custom_prompt=None, paper_text=None, temperature=0):
 
 
 def debug_print_prompt(prompt, prompt_kwargs, history_messages):
-    """Render the full prompt (history + current input) without calling the model"""
+
     try:
         rendered_prompt = prompt.format_messages(
             **prompt_kwargs,

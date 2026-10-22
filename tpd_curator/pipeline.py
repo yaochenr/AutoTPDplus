@@ -27,7 +27,7 @@ from langchain_core.messages import HumanMessage, AIMessage
 
 
 def find_latest_cleaned_json_dir(output_dir: Path) -> str:
-    """Find the latest timestamped cleaned_jsons directory"""
+
     cleaned_papers_dir = output_dir / "cleaned_papers"
     
     if not cleaned_papers_dir.exists():
@@ -67,7 +67,7 @@ def load_config(config_path: str) -> dict:
 
 
 def _read_text_head(file_path: Union[str, Path], n=5, encodings=('utf-8-sig','utf-8','latin1')) -> Tuple[str, str]:
-    """Read first n lines of text file to determine delimiter/header, return (text,..."""
+
     for enc in encodings:
         try:
             with open(file_path, 'r', encoding=enc, errors='strict') as f:
@@ -81,7 +81,7 @@ def _read_text_head(file_path: Union[str, Path], n=5, encodings=('utf-8-sig','ut
 
 
 def _sniff_delimiter(text_head: str) -> str:
-    """Try to detect delimiter using csv"""
+
     try:
         dialect = csv.Sniffer().sniff(text_head, delimiters=[',',';','\t','|'])
         return dialect.delimiter
@@ -95,7 +95,7 @@ def _sniff_delimiter(text_head: str) -> str:
 
 
 def _try_multiheader_read_csv(file_path, encoding, delimiter):
-    """Try reading CSV with multi-level header [0,1]; fallback to single header if..."""
+
     df = pd.read_csv(
         file_path,
         sep=delimiter,
@@ -120,7 +120,7 @@ def _try_multiheader_read_csv(file_path, encoding, delimiter):
 
 
 def _flatten_columns(cols) -> list:
-    """Flatten multi-level columns: ('BRD4','pDC50') -> 'BRD4 | pDC50'"""
+
     if isinstance(cols, pd.MultiIndex):
         flat = []
         for tup in cols:
@@ -133,7 +133,7 @@ def _flatten_columns(cols) -> list:
 
 
 def _coerce_numeric(df: pd.DataFrame) -> pd.DataFrame:
-    """Convert numeric-looking columns to numeric, handling comma as decimal point..."""
+
     out = df.copy()
     for c in out.columns:
         s = out[c]
@@ -151,10 +151,10 @@ def _coerce_numeric(df: pd.DataFrame) -> pd.DataFrame:
             s2 = s2.str.replace('.', '', regex=False)
             s2 = s2.str.replace(',', '.', regex=False)
         try:
-            # pandas deprecated errors="ignore" in 2.2.  Calling without an
-            # errors argument and retaining the cleaned strings on failure
-            # preserves the old all-or-nothing behaviour without emitting a
-            # FutureWarning (and without turning non-numeric cells into NaN).
+
+
+
+
             out[c] = pd.to_numeric(s2)
         except (ValueError, TypeError):
             out[c] = s2
@@ -162,7 +162,7 @@ def _coerce_numeric(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def read_markdown_file(file_path: Union[str, Path]) -> str:
-    """Read markdown file and return its content as string"""
+
     try:
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
@@ -173,7 +173,7 @@ def read_markdown_file(file_path: Union[str, Path]) -> str:
 
 
 def read_csv_excel_file(file_path: Union[str, Path]) -> str:
-    """Read CSV/Excel file and return formatted text representation"""
+
     file_path = Path(file_path)
     file_ext = file_path.suffix.lower()
 
@@ -256,7 +256,7 @@ def read_csv_excel_file(file_path: Union[str, Path]) -> str:
 
 
 def read_docx_file(file_path: Union[str, Path]) -> str:
-    """Read DOCX file and return text content including paragraphs and tables"""
+
     if not DOCX_AVAILABLE:
         return f"Cannot read DOCX file {file_path}: python-docx not available\n"
 
@@ -287,7 +287,7 @@ def read_docx_file(file_path: Union[str, Path]) -> str:
 
 
 def _contains_relevant_keywords(content: str) -> bool:
-    """Check if content contains any of the relevant keywords: DC50, Dmax"""
+
     if not content:
         return False
 
@@ -299,7 +299,7 @@ def _contains_relevant_keywords(content: str) -> bool:
 
 
 def _filter_excel_sheets_by_keywords(file_path: Union[str, Path]) -> str:
-    """Read Excel file and return only sheets containing relevant keywords"""
+
     try:
         excel_file = pd.ExcelFile(file_path)
         sheet_names = excel_file.sheet_names
@@ -368,7 +368,7 @@ def _filter_excel_sheets_by_keywords(file_path: Union[str, Path]) -> str:
 
 
 def _supplementary_file_provenance(file_path: Path, supplementary_folder: Path) -> Dict[str, str]:
-    """Resolve archive/document provenance recorded by PMC SI post-processing."""
+
     relative_path = file_path.relative_to(supplementary_folder).as_posix()
     provenance = {
         "relative_path": relative_path,
@@ -412,7 +412,7 @@ def _supplementary_file_provenance(file_path: Path, supplementary_folder: Path) 
 
 
 def load_supplementary_files_for_pmc(pmc_id: str, json_path: str, filter_by_keywords: bool = True) -> List[Dict[str, str]]:
-    """Recursively load processable original, extracted, and normalized SI files."""
+
     supplementary_folder = Path(json_path) / pmc_id / "supplementary"
 
     if not supplementary_folder.exists():
@@ -533,7 +533,7 @@ def load_supplementary_files_for_pmc(pmc_id: str, json_path: str, filter_by_keyw
 
 
 def initialize_character_tracking(pmc_id: str, with_history: bool) -> dict:
-    """Initialize character tracking data structure for a paper"""
+
     return {
         "pmc_id": pmc_id,
         "with_history": with_history,
@@ -555,7 +555,7 @@ def record_llm_input_characters(tracking_data: dict,
                                 custom_prompt: str = None,
                                 paper_text: str = None,
                                 supplementary_filename: str = None) -> None:
-    """Record character counts for a single LLM input round"""
+
     total_chars = len(complete_prompt) if complete_prompt else 0
     prompt_chars = len(custom_prompt) if custom_prompt else 0
     paper_chars = len(paper_text) if paper_text else 0
@@ -582,7 +582,7 @@ def record_llm_input_characters(tracking_data: dict,
 
 
 def save_character_length_json(tracking_data: dict, output_path: Path) -> None:
-    """Save character tracking data to JSON file"""
+
     try:
         with open(output_path, 'w', encoding='utf-8') as f:
             json.dump(tracking_data, f, ensure_ascii=False, indent=2)
@@ -635,7 +635,7 @@ def test_history_memory(session_id: str):
 
 
 def clean_json_papers_batch(config: dict):
-    """Process JSON papers with data cleaning"""
+
     json_path = config["data"].get("json_path")
     if not json_path or not Path(json_path).exists():
         raise FileNotFoundError(f"JSON data path does not exist or not specified: {json_path}")
@@ -671,7 +671,7 @@ def clean_json_papers_batch(config: dict):
 
 
 def run_llm_pipeline(config: dict, read_papers: bool = False, md_prompt: str = None, with_history: bool = False, tutorial_text: str = None, no_timestamp: bool = False, custom_output_dir: Path = None):
-    """Run LLM to extract molecular glue data"""
+
 
     if no_timestamp and custom_output_dir:
         results_dir = Path(custom_output_dir)
@@ -1123,7 +1123,7 @@ If no additional IUPAC names or SMILES are found, return an empty array: []"""
 
 
 def save_csv(config_file: dict, results_dir: str = None):
-    """Generate CSV files from JSON extraction results"""
+
     if results_dir:
         latest_json_dir = Path(results_dir)
         if not latest_json_dir.exists():
@@ -1306,7 +1306,7 @@ _APPROX_PREFIX_RE = re.compile(
 
 
 def convert_to_nm(value_str: str, unit: str) -> str:
-    """Convert concentration value to nM, handling comparison operators,..."""
+
     try:
         unit = normalize_concentration_unit(unit)
         if unit is None:
@@ -1342,7 +1342,7 @@ def convert_to_nm(value_str: str, unit: str) -> str:
         number_part = number_part.replace(',', '')
 
         def apply_conversion(val):
-            """Apply unit conversion factor to a numeric value (unit is already normalized)"""
+
             if unit == 'um':
                 return val * 1000
             elif unit == 'mm':
@@ -1357,7 +1357,7 @@ def convert_to_nm(value_str: str, unit: str) -> str:
                 return None
 
         def format_value(val):
-            """Format converted value preserving original precision"""
+
             result = str(val)
             if '.' in result:
                 result = result.rstrip('0').rstrip('.')
@@ -1422,7 +1422,7 @@ _DMAX_PHRASE_PATTERNS = [
 
 
 def clean_dmax_value(value_str):
-    """Normalize Dmax while preserving operators"""
+
     if pd.isna(value_str) or value_str == 'null':
         return None
 
@@ -1452,21 +1452,21 @@ def clean_dmax_value(value_str):
 
 
 def normalize_dmax_for_dedup(val):
-    """Strip operator characters from Dmax for dedup-key construction only"""
+
     if pd.isna(val):
         return ''
     return _DMAX_OPERATOR_RE.sub('', str(val).strip())
 
 
 def dmax_has_operator(val):
-    """True if the Dmax string contains any comparison/approximation operator"""
+
     if pd.isna(val):
         return False
     return bool(_DMAX_OPERATOR_RE.search(str(val)))
 
 
 def is_pdc50_unit(unit_str) -> bool:
-    """True if the unit string denotes pDC50 / log10[M] (i"""
+
     if unit_str is None or (isinstance(unit_str, float) and pd.isna(unit_str)):
         return False
     u = str(unit_str).lower()
@@ -1480,7 +1480,7 @@ def is_pdc50_unit(unit_str) -> bool:
 
 
 def convert_pdc50_to_nm(value_str: str) -> str:
-    """Convert a pDC50 (log10[M]) value to DC50 in nM"""
+
     if value_str is None or (isinstance(value_str, float) and pd.isna(value_str)) or value_str == 'null':
         return value_str
 
@@ -1510,7 +1510,7 @@ def convert_pdc50_to_nm(value_str: str) -> str:
 
 
 def clean_dc50_value(value_str: str) -> str:
-    """Remove embedded units and clean formatting from DC50 values"""
+
     if pd.isna(value_str) or value_str == 'null':
         return value_str
 
@@ -1750,7 +1750,7 @@ def process_units(csv_file_path: str):
             before_sub = len(df)
 
             def _is_empty(val):
-                """Check if a value is considered empty"""
+
                 if val is None:
                     return True
                 if isinstance(val, float) and pd.isna(val):
@@ -1815,7 +1815,7 @@ def process_units(csv_file_path: str):
 
 
 def normalize_unicode_chars(text: str) -> str:
-    """Normalize Unicode characters that might appear identical but have different..."""
+
     if pd.isna(text):
         return text
 
@@ -1830,7 +1830,7 @@ def normalize_unicode_chars(text: str) -> str:
 
 
 def normalize_dashes(text: str) -> str:
-    """Normalize all dash/hyphen variants to standard hyphen-minus (U+002D)"""
+
     if pd.isna(text):
         return text
     text = str(text)
@@ -1839,7 +1839,7 @@ def normalize_dashes(text: str) -> str:
 
 
 def normalize_compound_name_aliases(name: Any) -> Set[str]:
-    """Return conservative aliases for compound names used in evaluation matching."""
+
     if is_missing_value(name):
         return set()
 
@@ -1865,8 +1865,8 @@ def normalize_compound_name_aliases(name: Any) -> Set[str]:
         if leading_alias:
             aliases.add(leading_alias)
 
-    # Handles paper-local labels such as "6 (SJ6986)" or "12a CCT373566"
-    # while leaving names like "13-7", "PT-179", and "MGD-4" untouched.
+
+
     local_id_match = re.match(
         r'^(?:compound|comp|cpd|no\.?)?\s*\d+[a-z]?\s+(.+)$',
         raw_name
@@ -1881,7 +1881,7 @@ def normalize_compound_name_aliases(name: Any) -> Set[str]:
 
 
 def _normalize_identity_text(value: Any, *, lower: bool = True, remove_spaces: bool = False) -> str:
-    """Normalize chemical identity fields for deterministic matching."""
+
     if is_missing_value(value):
         return ""
 
@@ -1891,7 +1891,7 @@ def _normalize_identity_text(value: Any, *, lower: bool = True, remove_spaces: b
 
 
 def _looks_like_short_compound_alias(value: Any) -> bool:
-    """Return True for short aliases accidentally stored outside Compound_Name."""
+
     if is_missing_value(value):
         return False
 
@@ -1904,7 +1904,7 @@ def _looks_like_short_compound_alias(value: Any) -> bool:
 
 
 def compound_identity_keys(row: Any) -> Set[Tuple[str, str]]:
-    """Build deterministic keys for compound identity matching across rows."""
+
     keys: Set[Tuple[str, str]] = set()
 
     if hasattr(row, 'get'):
@@ -1938,7 +1938,7 @@ def compound_identity_keys(row: Any) -> Set[Tuple[str, str]]:
 
 
 def extract_value_with_operator(text: str) -> tuple:
-    """Extract comparison operator and numerical value from a string"""
+
     import re
     if pd.isna(text):
         return None, None
@@ -1964,7 +1964,7 @@ def extract_value_with_operator(text: str) -> tuple:
 
 
 def compare_exact_fields_with_normalization(val1, val2) -> bool:
-    """Compare two field values with Unicode normalization and numerical value..."""
+
     if pd.isna(val1) and pd.isna(val2):
         return True
     elif pd.isna(val1) or pd.isna(val2):
@@ -1996,7 +1996,7 @@ def compare_exact_fields_with_normalization(val1, val2) -> bool:
 
 
 def load_semantic_cache(cache_file_path: str = None) -> Dict[str, List[Dict]]:
-    """Load the semantic-match cache file, grouped by DOI"""
+
     if cache_file_path is None:
         print("Warning: No cache file path provided, using empty cache")
         return {}
@@ -2022,7 +2022,7 @@ def load_semantic_cache(cache_file_path: str = None) -> Dict[str, List[Dict]]:
 
 
 def save_semantic_cache(cache_data: Dict[str, List[Dict]], cache_file_path: str = None):
-    """Save the semantic-match cache to disk, grouped by DOI"""
+
     if cache_file_path is None:
         print("Warning: No cache file path provided, cannot save cache")
         return
@@ -2036,12 +2036,12 @@ def save_semantic_cache(cache_data: Dict[str, List[Dict]], cache_file_path: str 
 
 
 def find_cache_match(pred_value: str, labeled_value: str, feature: str, cache_data: Dict[str, List[Dict]], doi: str = None) -> str:
-    """Look up a match in the cache"""
+
     pred_value = str(pred_value).strip()
     labeled_value = str(labeled_value).strip()
 
     def search_in_list(items: List[Dict]) -> str:
-        """Search a list of cache entries for a match"""
+
         for item in items:
             cache_pred = str(item['pred_value']).strip()
             cache_labeled = str(item['labeled_value']).strip()
@@ -2072,7 +2072,7 @@ def find_cache_match(pred_value: str, labeled_value: str, feature: str, cache_da
     return None
 
 def check_semantic_match(pred_value: str, labeled_value: str, feature: str = None, llm_api_key: str = None, llm_api_url: str = None, config: dict = None, cache_file_path: str = None, doi: str = None) -> bool:
-    """Check whether two values are semantically equivalent, with a file cache to..."""
+
 
     if pd.isna(pred_value) or pd.isna(labeled_value):
         return False
@@ -2136,7 +2136,7 @@ def check_semantic_match(pred_value: str, labeled_value: str, feature: str = Non
 
 
 def is_missing_value(value) -> bool:
-    """Check whether a value is empty/missing"""
+
     if pd.isna(value):
         return True
     if isinstance(value, str):
@@ -2147,7 +2147,7 @@ def is_missing_value(value) -> bool:
 
 
 def parse_value_with_range(value: str) -> Tuple[float, float, float]:
-    """Parse a numeric string, supporting several interval formats"""
+
     if pd.isna(value) or is_missing_value(value):
         return (None, None, None)
 
@@ -2182,7 +2182,7 @@ def parse_value_with_range(value: str) -> Tuple[float, float, float]:
 
 
 def check_value_in_range(pred_value: str, ref_value: str) -> bool:
-    """Check whether pred_value falls inside ref_value's interval (or vice versa)"""
+
     pred_center, pred_lower, pred_upper = parse_value_with_range(pred_value)
     ref_center, ref_lower, ref_upper = parse_value_with_range(ref_value)
 
@@ -2199,7 +2199,7 @@ def check_value_in_range(pred_value: str, ref_value: str) -> bool:
 
 
 def compare_assay_values(pred_value, ref_value) -> bool:
-    """Compare assay values using exact match plus interval match"""
+
     if pd.isna(pred_value) and pd.isna(ref_value):
         return True
     elif pd.isna(pred_value) or pd.isna(ref_value):
@@ -2228,7 +2228,7 @@ _CONCENTRATION_UNIT_ALIASES = {
 
 
 def normalize_concentration_unit(unit) -> str:
-    """Normalize a concentration unit to a short token (e"""
+
     if unit is None or (isinstance(unit, float) and pd.isna(unit)):
         return None
     s = str(unit).strip().lower()
@@ -2240,7 +2240,7 @@ def normalize_concentration_unit(unit) -> str:
 
 
 def compare_concentration_units(pred_value, ref_value) -> bool:
-    """Concentration-unit equivalence: 'nmol/L' == 'nM', 'μM' == 'umol/L', etc"""
+
     if pd.isna(pred_value) and pd.isna(ref_value):
         return True
     if pd.isna(pred_value) or pd.isna(ref_value):
@@ -2259,7 +2259,7 @@ def compare_concentration_units(pred_value, ref_value) -> bool:
 
 def calculate_assay_match_score(pred_row, ref_row, assay_fields: list = None,
                                  tiebreak_fields: list = None) -> int:
-    """Score the assay-value field match between two records"""
+
     if assay_fields is None:
         assay_fields = ['DC50', 'Dmax', 'Dmax_h', 'Dmax_conc']
 
@@ -2299,7 +2299,7 @@ _STEREO_ERROR_MARGIN = 0.5
 
 def score_stereoisomer_match(pred_row, gt_row, error_margin: float = _STEREO_ERROR_MARGIN,
                                tiebreak_fields: list = None) -> int:
-    """Stereoisomer tiebreak scoring (stage 3)"""
+
     score = 0
     for field, pts in [('DC50', 2), ('Dmax', 2)]:
         pred_val = pred_row.get(field) if hasattr(pred_row, 'get') else None
@@ -2334,7 +2334,7 @@ def score_stereoisomer_match(pred_row, gt_row, error_margin: float = _STEREO_ERR
 
 def _classify_fp_type(pred_compound: str, attempted_matches: List[Dict],
                       gt_compounds_in_paper: Set[str]) -> str:
-    """Classify FP into three types:"""
+
     if not attempted_matches:
         pred_aliases = normalize_compound_name_aliases(pred_compound)
         for gt_comp in gt_compounds_in_paper:
@@ -2352,7 +2352,7 @@ def _classify_fp_type(pred_compound: str, attempted_matches: List[Dict],
 def _generate_fp_summary(fp_type: str, pred_row: pd.Series,
                         attempted_matches: List[Dict],
                         gt_compounds_in_paper: Set[str]) -> Dict:
-    """Generate FP summary based on FP type classification"""
+
     pred_compound = str(pred_row.get('Compound_Name', 'unknown'))
 
     if fp_type == 'compound_not_in_labeled_data':
@@ -2364,7 +2364,7 @@ def _generate_fp_summary(fp_type: str, pred_row: pd.Series,
     elif fp_type == 'compound_name_error':
 
         def clean_compound_name(name):
-            """Remove common prefixes like 'Compound', 'Cpd', 'No"""
+
             return re.sub(r'^(compound|comp|cpd|no\.?)\s*', '', name.lower().strip())
 
         pred_lower = pred_compound.lower().strip()
@@ -2468,7 +2468,7 @@ def evaluate_record_based_accuracy(pred_csv_path: str, labeled_csv_path: str,
                                     lenient_mode: bool = False,
                                     output_dir: str = None,
                                     ternary_complex_level: bool = False) -> dict:
-    """Record-based evaluation"""
+
     print("-" * 60)
     print("Starting record-based evaluation.")
 
@@ -3518,7 +3518,7 @@ COMPOUND_MATCH_NO = "no"
 
 
 def _match_compounds(row_a, row_b) -> str:
-    """Match two rows by compound identity, returning a tri-state verdict"""
+
     a_name = row_a.get('Compound_Name')
     b_name = row_b.get('Compound_Name')
     a_ck = row_a.get('Connectivity_Key')
@@ -3551,7 +3551,7 @@ def _match_compounds(row_a, row_b) -> str:
 
 
 def _is_complementary_compound_ambiguity(row_a, row_b) -> bool:
-    """One side has Compound_Name only (no Connectivity_Key), the other has"""
+
     a_name = not is_missing_value(row_a.get('Compound_Name'))
     b_name = not is_missing_value(row_b.get('Compound_Name'))
     a_ck = not is_missing_value(row_a.get('Connectivity_Key'))
@@ -3561,7 +3561,7 @@ def _is_complementary_compound_ambiguity(row_a, row_b) -> bool:
 
 
 def _identity_via_assay_fingerprint(row_a, row_b) -> bool:
-    """Confirm record identity via DC50 (preferred) or Dmax fingerprint"""
+
     dc50_a = row_a.get('DC50')
     dc50_b = row_b.get('DC50')
     if not is_missing_value(dc50_a) and not is_missing_value(dc50_b):
@@ -3576,7 +3576,7 @@ def _identity_via_assay_fingerprint(row_a, row_b) -> bool:
 
 
 def _no_field_contradictions(row_a, row_b, fields, config, cache_file_path, doi) -> bool:
-    """True if no listed field contradicts"""
+
     for field in fields:
         val_a = row_a.get(field)
         val_b = row_b.get(field)
@@ -3596,7 +3596,7 @@ def _no_field_contradictions(row_a, row_b, fields, config, cache_file_path, doi)
 
 
 def _all_fields_positively_match(row_a, row_b, fields, config, cache_file_path, doi) -> bool:
-    """All listed fields must be present on both sides AND match semantically"""
+
     for field in fields:
         val_a = row_a.get(field)
         val_b = row_b.get(field)
@@ -3616,7 +3616,7 @@ def _all_fields_positively_match(row_a, row_b, fields, config, cache_file_path, 
 
 
 def _match_fields_semantic(row_a, row_b, fields, config, cache_file_path, doi) -> bool:
-    """Check if all specified fields match between two rows using semantic matching"""
+
     for field in fields:
         val_a = row_a.get(field)
         val_b = row_b.get(field)
@@ -3644,7 +3644,7 @@ def _match_fields_semantic(row_a, row_b, fields, config, cache_file_path, doi) -
 
 
 def _cascade_match_records(doi, baseline_df, llm_df, config, cache_file_path) -> dict:
-    """Perform 3-level cascade matching between baseline and LLM records for a..."""
+
     L1_FIELDS = ['Degradation_Target', 'Recruiter', 'Assay', 'Cell_Line']
     L2_FIELDS = ['Degradation_Target', 'Recruiter']
     L3_FIELDS = ['Degradation_Target']
@@ -3660,7 +3660,7 @@ def _cascade_match_records(doi, baseline_df, llm_df, config, cache_file_path) ->
     intersection_l3 = []
 
     def _greedy_assign(candidates):
-        """Greedy non-conflicting assignment over (bl_idx, llm_idx, score, bl_rec, llm_rec)"""
+
         candidates_sorted = sorted(
             candidates, key=lambda c: (-c[2], c[0], c[1])
         )
@@ -3675,7 +3675,7 @@ def _cascade_match_records(doi, baseline_df, llm_df, config, cache_file_path) ->
         return chosen
 
     def _resolve_level(predicate, bucket):
-        """Collect every active (bl, llm) pair satisfying `predicate`, run a"""
+
         candidates = []
         for bl_idx, bl_rec in bl_active.items():
             for llm_idx, llm_rec in llm_active.items():
@@ -3758,7 +3758,7 @@ def run_llm_vs_baseline_evaluation(config_file: dict,
                                     llm_csv_path: str = None,
                                     baseline_csv_path: str = None,
                                     output_dir: str = None):
-    """Compare LLM extraction results against a baseline CSV using a 3-level"""
+
     print("-" * 60)
     print("Starting LLM vs Baseline evaluation (3-level cascade)...")
 
@@ -3875,7 +3875,7 @@ def run_llm_vs_baseline_evaluation(config_file: dict,
     print(f"    Matched + LLM_Only      = {total_matched + global_counts['llm_only']}  (should be {total_llm})")
 
     def _serialize_records(record_list):
-        """Convert record dicts (may contain numpy/pandas types) to JSON-serializable..."""
+
         serialized = []
         for entry in record_list:
             s_entry = {}
@@ -3916,7 +3916,7 @@ def run_llm_vs_baseline_evaluation(config_file: dict,
 
 
 def query_chembl_properties(compound_name: str) -> Tuple[Dict[str, Any], str]:
-    """Query all properties of a compound from ChEMBL"""
+
     try:
         from chembl_webresource_client.new_client import new_client
         
@@ -4005,7 +4005,7 @@ def fetch_smiles_multi_source(csv_file_path: str,
                                use_chembl: bool = True,
                                rate_limit_pubchem: float = 0.2,
                                rate_limit_chembl: float = 0.5) -> Path:
-    """Fetch SMILES from multiple sources (PubChem + ChEMBL)"""
+
     print("\n" + "="*60)
     print("SMILES EXTRACTION FROM MULTIPLE SOURCES")
     print("="*60)

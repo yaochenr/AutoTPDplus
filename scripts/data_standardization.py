@@ -1,7 +1,8 @@
-"""Data standardization pipeline for the extracted dataset."""
+
 
 import argparse
 import re
+import sys
 import time
 from pathlib import Path
 from urllib.parse import quote
@@ -9,7 +10,30 @@ from urllib.parse import quote
 import pandas as pd
 import requests
 
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+from tpd_curator.preprocessing.smiles_standardization import (
+    add_compound_key,
+    canonicalize_smiles_column,
+)
+
 HUMAN = 9606
+
+
+
+UNMAPPED: dict[str, set[str]] = {}
+
+
+_ENGINEERING_HINT = re.compile(
+    r"HiBiT|nLuc|NanoLuc|luciferase|Luc\b|GFP|mCherry|HaloTag|dTAG|FKBP|reporter|"
+    r"knock[- ]?(?:in|out|down)|\bKO\b|CRISPR|Cas9|sh[A-Z0-9]|si[A-Z0-9]|-/-|"
+    r"overexpress|transfect|transduc|stable|tagged|fusion",
+    re.IGNORECASE,
+)
+
+
+def _note_unmapped(kind: str, value) -> None:
+    UNMAPPED.setdefault(kind, set()).add(str(value))
 
 DEFAULT_INPUT_CSV = "data/protacs/llm/protac-data-llm.csv"
 DEFAULT_OUTPUT_CSV = "data/AutoTPD-PROTAC.csv"
@@ -25,9 +49,16 @@ def _place_after(df: pd.DataFrame, anchor: str, followers: list[str]) -> pd.Data
     return df[new_cols]
 
 
-# ===========================================================================
-# Cell line standardization (Cellosaurus)
-# ===========================================================================
+
+
+
+
+def _normalize_species(label: str | None) -> str | None:
+
+    if not label:
+        return None
+    return re.sub(r"\s*\([^()]*\)\s*$", "", label).strip() or None
+
 
 def cellosaurus_search(query: str) -> dict | None:
     url = "https://api.cellosaurus.org/search/cell-line"
@@ -59,7 +90,7 @@ def cellosaurus_search(query: str) -> dict | None:
                 taxonomy_id = None
                 sp_list = entry.get("species-list", [])
                 if sp_list:
-                    species = sp_list[0].get("label")
+                    species = _normalize_species(sp_list[0].get("label"))
                     taxonomy_id = int(sp_list[0].get("accession", 0)) or None
                 return {"accession": acc, "name": rec_name, "species": species, "taxonomy_id": taxonomy_id}
     except Exception as e:
@@ -80,7 +111,7 @@ def cellosaurus_fetch(accession: str) -> dict | None:
         taxonomy_id = None
         sp_list = entry.get("species-list", [])
         if sp_list:
-            species = sp_list[0].get("label")
+            species = _normalize_species(sp_list[0].get("label"))
             taxonomy_id = int(sp_list[0].get("accession", 0)) or None
         return {"accession": accession, "name": rec_name, "species": species, "taxonomy_id": taxonomy_id}
     except Exception as e:
@@ -94,14 +125,14 @@ CL_SEARCH_MAP = {
     "A375":                 "A-375",
     "A375 xenograft":       "A-375",
     "A549":                 "A-549",
-    "Ba/F3 Bcr-AblT315I":  "Ba/F3 BCR-ABL-T315I",
+    "Ba/F3 Bcr-AblT315I":  "Ba/F3",
     "BMDMs":                None,
     "CAL-12-T":             "CAL-12T",
     "CAOV4":                "Caov-4",
     "Flip-In 293":          "Flp-In-293",
     "Flp-In T-REx 293":    "Flp-In-T-REx-293",
-    "Flp293T GFP-GSPT1(389-499)/mCherry": "Flp-In-293",
-    "G2019S LRRK2 MEFs":   "MEF Lrrk2-p.G2019S KI",
+    "Flp293T GFP-GSPT1(389-499)/mCherry": "Flp293T",
+    "G2019S LRRK2 MEFs":   None,
     "H1666":                "NCI-H1666",
     "H293T":                "HEK293T",
     "HCC-15":               "HCC15",
@@ -130,25 +161,25 @@ CL_SEARCH_MAP = {
     "MV4;11":               "MV4-11",
     "NIH-3T3":              "NIH 3T3",
     "Panc Tu-I":            "PancTu-I",
-    "R1441C LRRK2 MEFs":   "MEF Lrrk2-p.R1441C KI",
+    "R1441C LRRK2 MEFs":   "MEFs",
     "Rama 37 (S100A4-transfected)": "Rama 37",
     "SK-MEL-239 C4":        "SK-MEL-239",
-    "SK-N-BE(2)-C":         "CVCL_0529",  
+    "SK-N-BE(2)-C":         "SK-N-BE(2)-C",
     "TMD-8":                "TMD8",
     "TMD8 BTK-GFP/mCh":    "TMD8",
     "U87":                  "U-87MG ATCC",
     "WI38 non-senescent (NCs)": "WI-38",
-    "WT LRRK2 MEFs":        "Wt MEFs",
-    # --- Molecular glue cell lines ---
+    "WT LRRK2 MEFs":        "MEFs",
+
     "BxPC3":                "BxPC-3",
     "CWR22Rv1 (CRISPR HiBiT knock-in)": "22Rv1",
-    "HEK293T–Cas9":         "HEK293T/Cas9 AAVS1",
+    "HEK293T–Cas9":         "HEK293T",
     "KBM7":                 "KBM-7",
     "Karpas 422":           "Karpas-422",
     "MOLT4 CK1α-HiBiT":    "MOLT-4",
     "primary human Tregs":  None,
-    # --- MolGlueDB baseline cell lines ---
-    "BE(2)-C":              "CVCL_0529",  
+
+    "BE(2)-C":              "SK-N-BE(2)-C",
     "Human PBMCs":          None,
     "Human monocytes (n=3)": None,
     "Human whole blood":    None,
@@ -162,26 +193,26 @@ CL_SEARCH_MAP = {
     "SU-DHL-4":             "SU-DHL-4",
     "hMDM":                 None,
     "primary human erythroblasts": None,
-    # --- PROTACDB baseline cell lines ---
+
     "22Rv1":                "22Rv1",
-    "231MFP":               "MDA-MB-231",
-    "293FT":                "293FT",
+    "231MFP":               "231MFP",
+    "293FT":                "HEK293-FT",
     "4T1":                  "4T1",
     "A-204":                "A-204",
     "A152T neurons":        None,
     "A2780":                "A2780",
     "A431":                 "A-431",
-    "A549/Taxol":           "A549-Taxol",
+    "A549/Taxol":           "A-549",
     "AML12":                "AML12",
     "AsPC-1":               "AsPC-1",
     "BT474":                "BT-474",
     "Ba/F3":                "Ba/F3",
     "BaF3 FLT3-ITD":        "Ba/F3",
     "Bel-7402":             "BEL-7402",
-    "CA-46":                "CA-46",
+    "CA-46":                "CA46",
     "CAL-12T":              "CAL-12T",
     "CAL-148":              "CAL-148",
-    "CAL33":                "CAL 33",
+    "CAL33":                "CAL-33",
     "CCLP1":                "CC-LP-1",
     "CHL-1":                "CHL-1",
     "COLO 205":             "COLO 205",
@@ -192,7 +223,7 @@ CL_SEARCH_MAP = {
     "Calu-6":               "Calu-6",
     "Capan-1":              "Capan-1",
     "DB":                   "DB",
-    "DOHH2":                "DOHH-2",
+    "DOHH2":                "DOHH2",
     "Dermal fibroblast":    None,
     "EBC-1":                "EBC-1",
     "EOL-1":                "EoL-1",
@@ -221,7 +252,7 @@ CL_SEARCH_MAP = {
     "HEK293T":              "HEK293T",
     "HEL":                  "HEL",
     "HGC-27":               "HGC-27",
-    "HGC-27/HUVEC":         "HGC-27",
+    "HGC-27/HUVEC":         "HGC-27/HUVEC",
     "HL-60":                "HL-60",
     "HL60":                 "HL-60",
     "HLE":                  "HLE",
@@ -230,7 +261,7 @@ CL_SEARCH_MAP = {
     "HT-29":                "HT-29",
     "HT1080":               "HT-1080",
     "HT29":                 "HT-29",
-    "HUCCT1":               "HuCCT1",
+    "HUCCT1":               "HuCC-T1",
     "HUH-1":                "HuH-1",
     "HeLa":                 "HeLa",
     "Hep3B2.1-7":           "Hep 3B2.1-7",
@@ -293,8 +324,8 @@ CL_SEARCH_MAP = {
     "NCI-H838":             "NCI-H838",
     "NGP":                  "NGP",
     "Namalwa":              "Namalwa",
-    "OCI-AML2":             "OCI-AML2",
-    "OCI-AML3":             "OCI-AML3",
+    "OCI-AML2":             "OCI-AML-2",
+    "OCI-AML3":             "OCI-AML-3",
     "OVCAR-5":              "OVCAR-5",
     "OVCAR8":               "OVCAR-8",
     "PA1":                  "PA-1",
@@ -339,7 +370,7 @@ CL_SEARCH_MAP = {
     "T47D":                 "T-47D",
     "THP-1":                "THP-1",
     "THP1":                 "THP-1",
-    "TM3":                  "TM3",
+    "TM3":                  "CVCL_4326",
     "TMD8":                 "TMD8",
     "U251":                 "U-251MG",
     "U937":                 "U-937",
@@ -351,7 +382,7 @@ CL_SEARCH_MAP = {
     "hPBMC":                None,
     "human dermal papilla": None,
     "platelets":            None,
-    # Primary cells / non-standard — no Cellosaurus entry
+
     "4xSNCA iPSC-derived dopaminergic neurons (DANs)": None,
     "EGFR-AXL chimeric cell line":   None,
     "EGFR-MERTK chimeric cell line": None,
@@ -368,10 +399,94 @@ CL_SEARCH_MAP = {
     "primary CLL cells":     None,
     "primary rat neonatal cardiomyocytes": None,
     "tau-P301L iPSC-derived neurons": None,
+
+
+
+    "HeLa cells":                            "HeLa",
+    "Jurkat E6.1":                           "Jurkat E6.1",
+    "Jurkat +elacridar":                     "Jurkat",
+    "Jurkat -elacridar":                     "Jurkat",
+    "Neuro-2a +elacridar":                   "Neuro-2a",
+    "Neuro-2a -elacridar":                   "Neuro-2a",
+    "SH-SY5Y neuroblastoma +elacridar":      "SH-SY5Y",
+    "SH-SY5Y neuroblastoma -elacridar":      "SH-SY5Y",
+    "TMD8 BTK-GFP/mCherry":                  "TMD8",
+    "Q175 mouse cortical neuron":            None,
+    "Q175 mouse cortical neuron -elacridar": None,
+    "primary cells from chronic lymphocytic leukemia (CLL) patients": None,
+}
+
+
+
+
+CL_STD_OVERRIDE: dict[str, str] = {
+    "FTD19-L5-RC6 (tau-A152T)":              "FTD19-L5-RC6",
+    "G2019S LRRK2 MEFs":                     "MEFs",
+    "MGH2046-RC1 (tau-P301L)":               "MGH2046-RC1",
+    "TM3":                                   "TM3",
+}
+
+
+
+
+
+
+
+
+
+
+CL_MODIFICATION_MAP = {
+
+    "A549/Taxol":                              "Taxol-resistant derivative",
+    "HCC-364 vr1":                             "vr1",
+
+    "CWR22Rv1 (CRISPR HiBiT knock-in)":   "CRISPR HiBiT knock-in",
+    "HEK-293T (BTK-nLuc)":                "BTK-nLuc",
+    "HEK-293T (IKZF1-nLuc)":              "IKZF1-nLuc",
+    "HEK-293T (IKZF3-nLuc)":              "IKZF3-nLuc",
+    "HEK293 BRD9-HiBiT/CAS9/FF":          "BRD9-HiBiT/Cas9/firefly luciferase",
+    "HEK293 BRD9-HiBiT/FF/CAS9":          "BRD9-HiBiT/Cas9/firefly luciferase",
+    "HEK293/BRD7-HiBiT":                  "BRD7-HiBiT",
+    "HEK293/BRD9-HiBiT":                  "BRD9-HiBiT",
+    "K562 HiBiT-tagged":                  "HiBiT-tagged",
+    "MOLT4 CK1α-HiBiT":                   "CK1α-HiBiT",
+    "MOLT4 HiBiT-IKZF1":                  "HiBiT-IKZF1",
+    "TMD8 BTK-GFP/mCh":                   "BTK-GFP/mCherry",
+    "TMD8 BTK-GFP/mCherry":               "BTK-GFP/mCherry",
+    "Flp293T GFP-GSPT1(389-499)/mCherry": "GFP-GSPT1(389-499)/mCherry",
+    "WT LRRK2 MEFs":                        "WT LRRK2",
+
+    "FTD19-L5-RC6 (tau-A152T)":              "tau-A152T",
+    "MGH2046-RC1 (tau-P301L)":               "tau-P301L",
+
+    "Ba/F3 Bcr-AblT315I":                 "BCR-ABL1 T315I",
+    "BaF3 FLT3-ITD":                      "FLT3-ITD",
+    "HEK293 (α1A-AR stably transfected)": "α1A-AR stably transfected",
+    "HEK293-hTau":                        "human tau (hTau)",
+    "Rama 37 (S100A4-transfected)":       "S100A4-transfected",
+    "Snca OE-PFF seeding HEK293T":        "SNCA overexpression",
+    "SK-MEL-239 C4":                       "C4 clone",
+
+    "G2019S LRRK2 MEFs":                  "LRRK2 G2019S",
+    "R1441C LRRK2 MEFs":                  "LRRK2 R1441C",
+    "Insig-silenced HepG2":               "INSIG-silenced",
 }
 
 
 def standardize_cell_lines(df_llm: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
+
+
+
+
+
+
+
+
+
+
+
+
+
     cl_list = sorted(
         df_llm["Cell_Line"]
         .dropna()
@@ -397,6 +512,8 @@ def standardize_cell_lines(df_llm: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
             result = cellosaurus_search(search_name)
         if result:
             cl_info[cl] = result
+            if cl not in CL_MODIFICATION_MAP and cl not in CL_SEARCH_MAP and _ENGINEERING_HINT.search(cl):
+                _note_unmapped("cell_line_modification", cl)
             sp = result.get("species", "")
             if result["name"] != cl:
                 print(f"  -> {result['name']} ({result['accession']}, {sp})")
@@ -404,6 +521,9 @@ def standardize_cell_lines(df_llm: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
                 print(f"  OK ({result['accession']}, {sp})")
         else:
             not_found.append(cl)
+            _note_unmapped("cell_line", cl)
+            if cl not in CL_MODIFICATION_MAP and _ENGINEERING_HINT.search(cl):
+                _note_unmapped("cell_line_modification", cl)
             print(f"  NOT FOUND")
         time.sleep(0.15)
 
@@ -422,24 +542,45 @@ def standardize_cell_lines(df_llm: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
 
     _cl_stripped = df_llm["Cell_Line"].astype("string").str.strip()
 
-    df_llm["Cell_Line_ID"] = _cl_stripped.map(lambda cl: _cl_field(cl, "accession"))
+    recommended = _cl_stripped.map(
+        lambda cl: CL_STD_OVERRIDE.get(cl) or _cl_field(cl, "name")
+    ).astype("string")
+    df_llm["Cell_Line_STD"] = recommended.fillna(_cl_stripped)
+    df_llm["Cell_Line_STD_Accession"] = _cl_stripped.map(lambda cl: _cl_field(cl, "accession"))
+    df_llm["Cell_Line_Modification"] = _cl_stripped.map(
+        lambda cl: CL_MODIFICATION_MAP.get(cl) if pd.notna(cl) else None
+    ).astype("string")
     df_llm["Cell_Line_Species"] = _cl_stripped.map(lambda cl: _cl_field(cl, "species"))
     df_llm["_taxonomy_id"] = _cl_stripped.map(
         lambda cl: _cl_field(cl, "taxonomy_id") or HUMAN
     ).astype(int)
 
-    n_id = df_llm["Cell_Line_ID"].notna().sum()
+    n_rows = _cl_stripped.notna().sum()
+    n_acc = df_llm["Cell_Line_STD_Accession"].notna().sum()
     n_sp = df_llm["Cell_Line_Species"].notna().sum()
-    print(f"\nCell_Line_ID mapped: {n_id}/{len(df_llm)} rows")
-    print(f"Cell_Line_Species mapped: {n_sp}/{len(df_llm)} rows")
+    n_mod = df_llm["Cell_Line_Modification"].notna().sum()
+    n_renamed = (recommended.notna() & (recommended != _cl_stripped)).sum()
+    print(f"\nRows with a cell line: {n_rows}/{len(df_llm)}")
+    print(f"Cellosaurus accession mapped: {n_acc}/{n_rows} rows")
+    print(f"Cell_Line_STD differs from the extracted name: {n_renamed} rows")
+    print(f"Cell_Line_STD kept as extracted (no Cellosaurus entry): {n_rows - n_acc} rows")
+    print(f"Cell_Line_Modification recorded: {n_mod}/{n_rows} rows")
+    print(f"Cell_Line_Species mapped: {n_sp}/{n_rows} rows")
 
-    df_llm = _place_after(df_llm, "Cell_Line", ["Cell_Line_ID", "Cell_Line_Species"])
+    unknown_mods = sorted(set(CL_MODIFICATION_MAP) - set(cl_list))
+    if unknown_mods and len(cl_list) > 1:
+        print(f"CL_MODIFICATION_MAP entries not present in this dataset: {len(unknown_mods)}")
+
+    df_llm = _place_after(df_llm, "Cell_Line", [
+        "Cell_Line_STD", "Cell_Line_STD_Accession",
+        "Cell_Line_Modification", "Cell_Line_Species",
+    ])
 
     return df_llm, cl_info
 
 
 def build_taxid_to_species(cl_info: dict) -> dict:
-    taxid_to_species = {HUMAN: "Homo sapiens (Human)"}
+    taxid_to_species = {HUMAN: "Homo sapiens"}
     for info in cl_info.values():
         tid = info.get("taxonomy_id")
         sp = info.get("species")
@@ -448,9 +589,9 @@ def build_taxid_to_species(cl_info: dict) -> dict:
     return taxid_to_species
 
 
-# ===========================================================================
-# Gene / UniProt / mutation lookup helpers
-# ===========================================================================
+
+
+
 
 def parse_mutation(mut_str: str | None) -> tuple[str, int, str] | None:
     if not mut_str:
@@ -635,9 +776,9 @@ def apply_mutation(sequence: str, wt_aa: str, position: int, mut_aa: str) -> str
     return sequence[:idx] + mut_aa + sequence[idx + 1:]
 
 
-# ===========================================================================
-# POI cleaning + enrichment
-# ===========================================================================
+
+
+
 
 poi_alias_map = {
     "BCL-XL": "Bcl-xL",
@@ -748,7 +889,7 @@ POI_LOOKUP = {
     "BRAFV600E":     {"search": "BRAF", "mutation": "V600E"},
     "Bcr-AblT315I":  {"search": "ABL1", "mutation": "T315I"},
     "KRASG12C":      {"search": "KRAS", "mutation": "G12C"},
-    # --- PROTACDB baseline targets without provided UniProt accessions ---
+
     "Alpha-tubulin": {"search": None,  "mutation": None},
     "BCR-ABL":       {"search": "ABL1",    "mutation": None},
     "BRD4-L":        {"search": "BRD4",    "mutation": None},
@@ -758,7 +899,7 @@ POI_LOOKUP = {
     "NS3":           {"search": None,      "mutation": None},
     "c-Src":         {"search": "SRC",     "mutation": None},
     "p-p38":         {"search": "MAPK14",  "mutation": None},
-    # --- PROTACDB baseline mutation targets ---
+
     "ALK G1202R":             {"search": "ALK",   "mutation": "G1202R"},
     "AR L702H and T878A":     {"search": "AR",    "mutation": None},
     "AR T878A":               {"search": "AR",    "mutation": "T878A"},
@@ -782,7 +923,7 @@ POI_LOOKUP = {
     "LRRK2 G2019S":           {"search": "LRRK2", "mutation": "G2019S"},
 
     "HCV NS3": {"search": None, "mutation": None},
-    # --- Molecular glue targets ---
+
     "Androgen receptor (f-AR)":             {"search": "Androgen receptor", "mutation": None},
     "BCL6":                                 {"search": "BCL6",    "mutation": None},
     "CK1α":                                 {"search": "CSNK1A1", "mutation": None},
@@ -792,7 +933,7 @@ POI_LOOKUP = {
     "IKZF2":                                {"search": "IKZF2",   "mutation": None},
     "Lin28":                                {"search": "LIN28A",  "mutation": None},
     "SALL4":                                {"search": "SALL4",   "mutation": None},
-    # --- MolGlueDB baseline targets ---
+
     "BRD4-S":                               {"search": "BRD4",    "mutation": None},
     "CDK12-CCNK":                           {"search": None,      "mutation": None},
     "CDO1":                                 {"search": "CDO1",    "mutation": None},
@@ -812,13 +953,16 @@ POI_LOOKUP = {
     "dALK3":                                {"search": "ALK",     "mutation": None},
     "eGFP(-SD36)":                          {"search": None,      "mutation": None},
     "eGFP(-SD40)":                          {"search": None,      "mutation": None},
-    # Reporter / fusion constructs
-    "FLuc-S4D (Firefly luciferase fused to SALL4 degron)": {"search": None, "mutation": None},
+
+    "FLuc-S4D (Firefly luciferase fused to SALL4 degron)": {"search": "SALL4", "mutation": None},
     "eGFP (fused to SD36)":                 {"search": None, "mutation": None},
     "eGFP (fused to SD40)":                 {"search": None, "mutation": None},
     "eGFP (fused to SD40 F18Q)":            {"search": None, "mutation": None},
     "eGFP (fused to SD56)":                 {"search": None, "mutation": None},
 
+    "BRAFG466V":                            {"search": "BRAF",   "mutation": "G466V"},
+    "BRAFG469A":                            {"search": "BRAF",   "mutation": "G469A"},
+    "Flag-tagged p38":                      {"search": "MAPK14", "mutation": None},
 }
 
 
@@ -927,6 +1071,7 @@ def clean_and_enrich_poi_from_uniprot(df_llm: pd.DataFrame, taxid_to_species: di
         lookup = POI_LOOKUP.get(poi)
         if lookup is None:
             print(f"  WARNING: '{poi}' not in POI_LOOKUP, skipping")
+            _note_unmapped("degradation_target", poi)
             fallback_info[(poi, org_id)] = info
             continue
 
@@ -1068,6 +1213,7 @@ def clean_and_enrich_poi(df_llm: pd.DataFrame, taxid_to_species: dict) -> pd.Dat
         lookup = POI_LOOKUP.get(poi)
         if lookup is None:
             print(f"  WARNING: '{poi}' not in POI_LOOKUP, skipping")
+            _note_unmapped("degradation_target", poi)
             poi_info[(poi, org_id)] = info
             continue
 
@@ -1079,7 +1225,7 @@ def clean_and_enrich_poi(df_llm: pd.DataFrame, taxid_to_species: dict) -> pd.Dat
             poi_info[(poi, org_id)] = info
             continue
 
-        # Step 1: Gene symbol (HGNC for human, UniProt for others)
+
         gene, gene_src = find_gene_symbol(search_term, org_id)
         info["gene"] = gene
         if gene:
@@ -1159,7 +1305,7 @@ def clean_and_enrich_poi(df_llm: pd.DataFrame, taxid_to_species: dict) -> pd.Dat
     n_gene = mapping_df["Gene"].notna().sum()
     n_uniprot = mapping_df["UniProt"].notna().sum()
     n_mut = mapping_df["MutationID"].notna().sum()
-    n_nonhuman = (mapping_df["Organism"] != "Human").sum()
+    n_nonhuman = (mapping_df["Organism"] != "Homo sapiens").sum()
     print(f"\nUnique (target, organism) pairs: {len(mapping_df)}")
     print(f"  Non-human pairs: {n_nonhuman}")
     print(f"Gene symbols found: {n_gene}/{len(mapping_df)}")
@@ -1174,9 +1320,9 @@ def clean_and_enrich_poi(df_llm: pd.DataFrame, taxid_to_species: dict) -> pd.Dat
     return df_llm
 
 
-# ===========================================================================
-# E3-Ligase (Recruiter) cleaning + enrichment
-# ===========================================================================
+
+
+
 
 e3_alias_map = {
     "CEREBLON":           "CRBN",
@@ -1197,7 +1343,7 @@ E3_LOOKUP = {
     "DCAF1":  "DCAF1",
     "HRD1":   "SYVN1",
     "KLHL20": "KLHL20",
-    # --- Molecular glue recruiters ---
+
     "CRL2KLHDC3":                  "KLHDC3",
     "DCAF16":                      "DCAF16",
     "DCAF16 (CRL4DCAF16)":         "DCAF16",
@@ -1207,7 +1353,7 @@ E3_LOOKUP = {
     "DDB1–CUL4–RBX1":              "DDB1",
     "RNF126":                      "RNF126",
     "SIAH1":                       "SIAH1",
-    # --- PROTACDB baseline recruiters ---
+
     "FEM1B":    "FEM1B",
     "Keap1":    "KEAP1",
     "XIAP":     "XIAP",
@@ -1241,6 +1387,8 @@ def clean_and_enrich_e3(df_llm: pd.DataFrame, taxid_to_species: dict) -> pd.Data
         search_term = E3_LOOKUP.get(e3)
         if search_term is None:
             print(f"  WARNING: '{e3}' not in E3_LOOKUP, skipping")
+            if e3 not in E3_LOOKUP:
+                _note_unmapped("recruiter", e3)
             e3_info[(e3, org_id)] = info
             continue
 
@@ -1292,7 +1440,7 @@ def clean_and_enrich_e3(df_llm: pd.DataFrame, taxid_to_species: dict) -> pd.Data
 
     n_gene = e3_mapping_df["Gene"].notna().sum()
     n_uniprot = e3_mapping_df["UniProt"].notna().sum()
-    n_nonhuman = (e3_mapping_df["Organism"] != "Human").sum()
+    n_nonhuman = (e3_mapping_df["Organism"] != "Homo sapiens").sum()
     print(f"\nUnique (recruiter, organism) pairs: {len(e3_mapping_df)}")
     print(f"  Non-human pairs: {n_nonhuman}")
     print(f"Gene symbols found: {n_gene}/{len(e3_mapping_df)}")
@@ -1305,9 +1453,9 @@ def clean_and_enrich_e3(df_llm: pd.DataFrame, taxid_to_species: dict) -> pd.Data
     return df_llm
 
 
-# ===========================================================================
-# DC50 / Dmax / Dmax_conc standardization
-# ===========================================================================
+
+
+
 
 _RAW_COLS = ["DC50_raw", "DC50_h_raw", "Dmax_raw", "Dmax_h_raw", "Dmax_conc_raw"]
 _INSERT_AFTER = {
@@ -1351,6 +1499,42 @@ _MONTH_TO_NUMBER = {
     "dec": 12,
 }
 
+_DASH_TRANSLATION = str.maketrans({char: "-" for char in "‐‑‒–—―−﹣－"})
+_DC50_NUMBER = r"[0-9]+(?:\.[0-9]+)?"
+_DC50_UNIT = r"(?:pM|nM|[uµμ]M|pmol/L|nmol/L|[uµμ]mol/L)"
+
+
+def _dc50_result(
+    *,
+    value=None,
+    operator=None,
+    range_min=None,
+    range_max=None,
+    units=None,
+) -> dict:
+    return {
+        "value": value,
+        "operator": operator,
+        "range_min": range_min,
+        "range_max": range_max,
+        "units": units,
+    }
+
+
+def _dc50_unit_factor_to_nm(unit: str | None) -> float | None:
+
+    if unit is None:
+        return None
+    normalized = unit.strip().replace("µ", "u").replace("μ", "u").lower()
+    return {
+        "pm": 1e-3,
+        "pmol/l": 1e-3,
+        "nm": 1.0,
+        "nmol/l": 1.0,
+        "um": 1e3,
+        "umol/l": 1e3,
+    }.get(normalized)
+
 
 def _excel_date_range_bounds(s: str) -> tuple[float, float] | None:
     m = re.match(r"^([0-9]{1,2})-([A-Za-z]{3})$", s.strip())
@@ -1365,13 +1549,13 @@ def _excel_date_range_bounds(s: str) -> tuple[float, float] | None:
 
 def parse_dc50(raw: str) -> dict:
     if pd.isna(raw):
-        return {"value": None, "operator": None, "range_min": None, "range_max": None}
+        return _dc50_result()
 
     s = str(raw).strip()
     if not s:
-        return {"value": None, "operator": None, "range_min": None, "range_max": None}
+        return _dc50_result()
     if s.strip("()").lower() in {"n/a", "na", "nan", "none"}:
-        return {"value": None, "operator": None, "range_min": None, "range_max": None}
+        return _dc50_result()
 
     s = s.replace(",", "")
 
@@ -1383,48 +1567,73 @@ def parse_dc50(raw: str) -> dict:
         .replace("～", "~")
         .replace("≥", ">=")
         .replace("≤", "<=")
-        .replace("–", "-")
+        .translate(_DASH_TRANSLATION)
     )
     s = re.sub(r"^DC_?50\s*[:=]?\s*", "", s, flags=re.IGNORECASE).strip()
-    s = re.sub(r"\s*nM\s*$", "", s, flags=re.IGNORECASE).strip()
 
     excel_date_range = _excel_date_range_bounds(s)
     if excel_date_range:
         lo, hi = excel_date_range
-        return {"value": None, "operator": None, "range_min": lo, "range_max": hi}
+        return _dc50_result(range_min=lo, range_max=hi)
 
-    m = re.match(r'^([0-9.]+)\s*(?:-|~)\s*([0-9.]+)$', s)
-    if m:
-        lo, hi = float(m.group(1)), float(m.group(2))
-        return {"value": None, "operator": None, "range_min": lo, "range_max": hi}
 
-    m = re.match(r'^(<=|<)\s*([0-9.]+)$', s)
-    if m:
-        val = float(m.group(2))
-        return {"value": val, "operator": m.group(1), "range_min": None, "range_max": None}
 
-    m = re.match(r'^(>=|>)\s*([0-9.]+)$', s)
-    if m:
-        val = float(m.group(2))
-        return {"value": val, "operator": m.group(1), "range_min": None, "range_max": None}
 
-    m = re.match(r'^~\s*([0-9.]+)$', s)
+    m = re.fullmatch(
+        rf"({_DC50_NUMBER})\s*({_DC50_UNIT})?\s*(?:-|~)\s*"
+        rf"({_DC50_NUMBER})\s*({_DC50_UNIT})?",
+        s,
+        flags=re.IGNORECASE,
+    )
     if m:
-        val = float(m.group(1))
-        return {"value": val, "operator": "~", "range_min": None, "range_max": None}
+        lo, lo_unit, hi, hi_unit = m.groups()
+        lo_value, hi_value = float(lo), float(hi)
+        if lo_unit or hi_unit:
+            lo_factor = _dc50_unit_factor_to_nm(lo_unit or hi_unit)
+            hi_factor = _dc50_unit_factor_to_nm(hi_unit or lo_unit)
+            if lo_factor is not None and hi_factor is not None:
+                return _dc50_result(
+                    range_min=lo_value * lo_factor,
+                    range_max=hi_value * hi_factor,
+                    units="nM",
+                )
+        return _dc50_result(range_min=lo_value, range_max=hi_value)
 
-    m = re.match(r'^([0-9.]+)\s*±\s*([0-9.]+)$', s)
-    if m:
-        center, err = float(m.group(1)), float(m.group(2))
-        return {"value": center, "operator": None, "range_min": center - err, "range_max": center + err}
 
-    m = re.match(r'^([0-9.]+)$', s)
+
+
+    m = re.fullmatch(
+        rf"(<=|>=|<|>|~)?\s*({_DC50_NUMBER})\s*({_DC50_UNIT})?",
+        s,
+        flags=re.IGNORECASE,
+    )
     if m:
-        val = float(m.group(1))
-        return {"value": val, "operator": None, "range_min": None, "range_max": None}
+        operator, number, unit = m.groups()
+        value = float(number)
+        if unit:
+            factor = _dc50_unit_factor_to_nm(unit)
+            if factor is not None:
+                return _dc50_result(value=value * factor, operator=operator, units="nM")
+        return _dc50_result(value=value, operator=operator)
+
+    m = re.fullmatch(
+        rf"({_DC50_NUMBER})\s*±\s*({_DC50_NUMBER})\s*({_DC50_UNIT})?",
+        s,
+        flags=re.IGNORECASE,
+    )
+    if m:
+        center, error, unit = float(m.group(1)), float(m.group(2)), m.group(3)
+        factor = _dc50_unit_factor_to_nm(unit) if unit else 1.0
+        units = "nM" if unit else None
+        return _dc50_result(
+            value=center * factor,
+            range_min=(center - error) * factor,
+            range_max=(center + error) * factor,
+            units=units,
+        )
 
     print(f"  WARNING: could not parse DC50 value: {raw!r}")
-    return {"value": None, "operator": None, "range_min": None, "range_max": None}
+    return _dc50_result()
 
 
 def parse_dc50_h(raw) -> int | float | None:
@@ -1503,12 +1712,15 @@ def standardize_dc50(df_llm: pd.DataFrame, input_csv: str) -> pd.DataFrame:
     df_llm["DC50_range_min"] = _normalize_numeric_series(parsed["range_min"])
     df_llm["DC50_range_max"] = _normalize_numeric_series(parsed["range_max"])
 
-    df_llm["DC50_units"] = (
+    extracted_units = (
         df_llm["DC50_units"]
         .astype("string")
         .str.strip()
-        .replace({"nm": "nM", "nmol/L": "nM"})
+        .replace({"nm": "nM", "nmol/L": "nM", "μM": "µM", "uM": "µM"})
     )
+
+
+    df_llm["DC50_units"] = parsed["units"].astype("string").fillna(extracted_units)
 
     dc50_h_raw = pd.read_csv(input_csv, usecols=["DC50_h"], dtype=str)["DC50_h"]
     dc50_h_parsed = dc50_h_raw.apply(parse_dc50_h)
@@ -1748,9 +1960,272 @@ def standardize_dmax_conc(df_llm: pd.DataFrame, input_csv: str) -> pd.DataFrame:
     return df_llm
 
 
-# ===========================================================================
-# Orchestration
-# ===========================================================================
+
+
+
+
+def standardize_smiles(df: pd.DataFrame) -> pd.DataFrame:
+
+
+
+
+
+
+
+
+
+
+    df, _ = canonicalize_smiles_column(df, column="SMILES")
+    df = add_compound_key(df)
+    df["Connectivity_Key"] = df["Compound_Key"].str[:14]
+    df = _place_after(df, "SMILES", ["Compound_Key", "Connectivity_Key"])
+    return df
+
+
+def add_autotpd_id(df: pd.DataFrame, prefix: str, width: int = 6) -> pd.DataFrame:
+
+
+
+
+
+
+    df = df.drop(columns=["AutoTPD_ID"], errors="ignore")
+    df.insert(0, "AutoTPD_ID", [f"{prefix}-{i:0{width}d}" for i in range(1, len(df) + 1)])
+    print(f"AutoTPD_ID minted: {len(df)} rows, {df['AutoTPD_ID'].iloc[0]} .. {df['AutoTPD_ID'].iloc[-1]}")
+    return df
+
+
+
+
+
+
+
+ASSAY_STD_MAP = {
+
+    "Western blot":                                                   "Western blot",
+    "Western Blot":                                                   "Western blot",
+    "western blot":                                                   "Western blot",
+    "Western blotting":                                               "Western blot",
+    "Western blotting (densitometry)":                                "Western blot",
+    "quantitative western blotting":                                  "Western blot",
+    "Licor-quantification of Western blots":                           "Western blot",
+    "quantitative western blot (immunoblot)":                         "Western blot",
+    "quantitative fluorescence western blot":                         "Western blot",
+    "western blot quantification":                                    "Western blot",
+    "Western blot quantification":                                    "Western blot",
+    "western blot (time-course immunoblot)":                          "Western blot",
+    "Western blot densitometry":                                      "Western blot",
+    "Western blot (densitometry)":                                    "Western blot",
+    "Western blot densitometry (immunoblot band intensity)":          "Western blot",
+    "Western blot (grayscale quantification)":                        "Western blot",
+    "Western blot (SDS-PAGE)":                                        "Western blot",
+    "Western blot (S100A4 level)":                                    "Western blot",
+    "Western blot (soluble/insoluble fractionation)":                 "Western blot",
+    "Western blot (+elacridar pretreatment)":                         "Western blot",
+    "Western blot (\u2212elacridar pretreatment)":                     "Western blot",
+    "Western blot (immunoblot)":                                      "Western blot",
+    "Western Blot(Immunoblot)":                                       "Western blot",
+    "Western blot (immunoblot) densitometry":                         "Western blot",
+    "Western blot (immunoblot) dose\u2013response":                    "Western blot",
+    "Western blot (immunoblot) dose\u2013response quantification":     "Western blot",
+    "Western blot (immunoblot), densitometric quantification":        "Western blot",
+    "Western blot (immunoblot), densitometry (ImageJ)":               "Western blot",
+    "immunoblot":                                                     "Western blot",
+    "Immunoblot":                                                     "Western blot",
+    "immunoblotting":                                                 "Western blot",
+    "Immunoblotting":                                                 "Western blot",
+    "immunoblot (western blot)":                                      "Western blot",
+    "Immunoblot (Western blot)":                                      "Western blot",
+    "immunoblotting (Western blot)":                                  "Western blot",
+    "immunoblotting (western blot)":                                  "Western blot",
+    "Immunoblotting (Western blot)":                                  "Western blot",
+    "Immunoblotting (western blot)":                                  "Western blot",
+    "Immunoblot densitometry (Western blot)":                         "Western blot",
+    "Immunoblot densitometry of cyclin K levels":                     "Western blot",
+    "Immunoblot (western blot) densitometry normalized to \u03b2-tubulin": "Western blot",
+    "immunoblot (western blot) quantification of IDO1 protein levels": "Western blot",
+    "In vivo tumor immunoblot (Western blot)":                        "Western blot",
+
+
+    "capillary electrophoresis":                                      "Capillary immunoassay",
+    "capillary electrophoresis (WES)":                                "Capillary immunoassay",
+    "Capillary-based immunoassay (Simple Western)":                   "Capillary immunoassay",
+    "Simple Western immunoassay (capillary-based)":                   "Capillary immunoassay",
+    "Automated capillary Western blot (JESS)":                        "Capillary immunoassay",
+
+
+    "HiBiT":                                                          "HiBiT",
+    "HiBit":                                                          "HiBiT",
+    "HiBiT assay":                                                    "HiBiT",
+    "HiBiT luminescence":                                             "HiBiT",
+    "HiBiT luminescence assay":                                       "HiBiT",
+    "HiBiT luminescence (Firefly-normalized)":                        "HiBiT",
+    "HiBiT degradation assay":                                        "HiBiT",
+    "HiBiT degradation assay (+ MLN4924)":                            "HiBiT",
+    "HiBiT(with MLN4924)":                                            "HiBiT",
+    "HiBiT lytic luminescence assay":                                 "HiBiT",
+    "HiBiT live-cell luminescent degradation assay":                  "HiBiT",
+    "HiBiT-LgBiT live-cell luminescence assay (%ARD)":                "HiBiT",
+    "HiBiT luciferase CK1\u03b1 degradation assay":                    "HiBiT",
+    "HiBiT luciferase degradation assay (Nano-Glo HiBiT Lytic Detection)": "HiBiT",
+    "NanoGlo HiBiT lytic assay":                                      "HiBiT",
+    "IKZF1-HiBiT kinetic degradation assay":                          "HiBiT",
+    "GSPT1-HiBiT endpoint degradation assay":                         "HiBiT",
+
+
+    "NanoLuc degradation kinetics":                                   "NanoLuc reporter",
+    "NanoLuc reporter assay (BTK-nLuc), endpoint":                    "NanoLuc reporter",
+    "NanoLuc reporter assay (IKZF1-nLuc), endpoint":                  "NanoLuc reporter",
+    "NanoLuc reporter assay (IKZF3-nLuc), endpoint":                  "NanoLuc reporter",
+
+
+    "MSD":                                                            "MSD",
+    "MSD assay":                                                      "MSD",
+    "MSD degrader assay":                                             "MSD",
+    "ELISA-based MSD assay":                                          "MSD",
+    "MSD (+elacridar pretreatment)":                                  "MSD",
+    "MSD (\u2212elacridar pretreatment)":                              "MSD",
+
+
+    "ELISA":                                                          "ELISA",
+    "in-cell ELISA":                                                  "ELISA",
+
+
+    "HTRF":                                                           "HTRF",
+
+
+    "Flow cytometry":                                                 "Flow cytometry",
+    "flow cytometry":                                                 "Flow cytometry",
+    "FACS":                                                           "Flow cytometry",
+    "Flow cytometry(FACS)":                                           "Flow cytometry",
+    "Flow cytometry(eGFP/mCherry)":                                   "Flow cytometry",
+    "Flow cytometry (eGFP:mCherry reporter)":                         "Flow cytometry",
+    "EGFP/mCherry reporter flow cytometry":                           "Flow cytometry",
+    "FACS dual fluorescence reporter assay":                          "Flow cytometry",
+    "Flow cytometry reporter assay (BRD4BD2-eGFP) measuring eGFP/mCherry ratio": "Flow cytometry",
+    "Flow cytometry of NS3-eGFP-2A-mCherry reporter (eGFP/mCherry ratio)":       "Flow cytometry",
+    "flow cytometry (BTK-GFP/mCherry ratiometric)":                   "Flow cytometry",
+    "flow cytometry (anti-AXL-PE)":                                   "Flow cytometry",
+    "flow cytometry (anti-MERTK-PE)":                                 "Flow cytometry",
+    "flow cytometry (anti-EGFR-PE on EGFR/TAM chimera)":              "Flow cytometry",
+
+
+    "Immunofluorescence":                                             "Fluorescence imaging",
+    "immunofluorescence assay":                                       "Fluorescence imaging",
+    "immunofluorescence imaging":                                     "Fluorescence imaging",
+    "Live-cell fluorescence imaging of GFP-BRD4":                     "Fluorescence imaging",
+    "Imaging-based GFP/mCherry ratio (high-content imaging, Operetta)": "Fluorescence imaging",
+    "FluoReSyn nanobody biosensor (GFP immunostaining)":              "Fluorescence imaging",
+
+
+    "eGFP/mCherry":                                                   "Fluorescent reporter",
+    "EGFP/mCherry reporter assay":                                    "Fluorescent reporter",
+    "BRD4BD2-eGFP/mCherry reporter assay":                            "Fluorescent reporter",
+    "HEK293T cyclin K\u2013eGFP reporter assay":                       "Fluorescent reporter",
+
+
+    "Firefly luciferase activity assay":                              "Luciferase reporter",
+    "CCNK-luc reporter (luciferase) degradation assay":               "Luciferase reporter",
+
+
+    "ProLabel":                                                       "Enzyme fragment complementation",
+    "In Cell Western":                                                "In-cell immunoassay",
+    "Cytoblot":                                                       "In-cell immunoassay",
+    "Dot blot":                                                       "Dot blot",
+    "protein degradation profiling":                                  "protein degradation profiling",
+    "ELISA + Western Blot":                                           "ELISA + Western Blot",
+}
+
+
+def standardize_assay(df: pd.DataFrame) -> pd.DataFrame:
+
+    if "Assay" not in df.columns:
+        print("Column 'Assay' not present, skipping assay standardization")
+        return df
+
+    stripped = df["Assay"].astype("string").str.strip()
+    df["Assay_STD"] = stripped.map(
+        lambda a: ASSAY_STD_MAP.get(a) if pd.notna(a) and a != "" else None
+    ).astype("string")
+
+    n_rows = (stripped.notna() & (stripped != "")).sum()
+    n_std = df["Assay_STD"].notna().sum()
+    print(f"Rows with an assay: {n_rows}/{len(df)}")
+    print(f"Assay_STD mapped: {n_std}/{n_rows} rows")
+
+    unmapped = sorted(set(stripped[(stripped.notna()) & (stripped != "") & df["Assay_STD"].isna()]))
+    if unmapped:
+        print(f"Assay values not in ASSAY_STD_MAP: {len(unmapped)}")
+        for a in unmapped:
+            print(f"  WARNING: '{a}' not in ASSAY_STD_MAP, Assay_STD left empty")
+            if a not in ASSAY_STD_MAP:
+                _note_unmapped("assay", a)
+
+    families = df["Assay_STD"].dropna().value_counts()
+    if len(families):
+        print(f"Technique families ({len(families)}):")
+        for fam, n in families.items():
+            print(f"  {n:>5}  {fam}")
+
+    df = _place_after(df, "Assay", ["Assay_STD"])
+    return df
+
+
+
+
+
+
+_UNMAPPED_SOURCES = {
+
+    "cell_line":              ("Cell_Line", "CL_SEARCH_MAP"),
+    "cell_line_modification": ("Cell_Line", "CL_MODIFICATION_MAP"),
+    "degradation_target":     ("Degradation_Target", "POI_LOOKUP"),
+    "recruiter":              ("Recruiter", "E3_LOOKUP"),
+    "assay":                  ("Assay", "ASSAY_STD_MAP"),
+}
+_EXAMPLE_COLUMNS = ["DOI", "Compound_Name", "Degradation_Target", "Recruiter", "Cell_Line", "Assay"]
+
+
+def write_unmapped_report(df: pd.DataFrame, path: str, input_csv: str) -> None:
+
+    import difflib
+    import json
+
+    items = []
+    for kind in sorted(UNMAPPED):
+        column, mapping_name = _UNMAPPED_SOURCES[kind]
+        mapping = globals()[mapping_name]
+        values = df[column].astype("string").str.strip()
+        lowered = {str(key).lower(): key for key in mapping}
+        for value in sorted(UNMAPPED[kind]):
+            mask = (values == value).fillna(False)
+            examples = (
+                df.loc[mask, [c for c in _EXAMPLE_COLUMNS if c in df.columns]]
+                .head(3).astype("string").fillna("").to_dict("records")
+            )
+            close = difflib.get_close_matches(value, [str(k) for k in mapping], n=3, cutoff=0.6)
+            if value.lower() in lowered and lowered[value.lower()] not in close:
+                close.insert(0, lowered[value.lower()])
+            items.append({
+                "kind": kind,
+                "value": value,
+                "mapping": mapping_name,
+                "rows": int(mask.sum()),
+                "examples": examples,
+                "close_existing": [{"key": k, "value": mapping[k]} for k in close],
+            })
+
+    out_path = Path(path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(json.dumps(
+        {"input_csv": str(input_csv), "items": items}, indent=2, ensure_ascii=False,
+    ) + "\n", encoding="utf-8")
+    print(f"Unmapped values: {len(items)} written to {out_path}")
+
+
+
+
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -1760,6 +2235,11 @@ def main():
                         help="Path to the extracted CSV.")
     parser.add_argument("--output_csv", type=str, default=DEFAULT_OUTPUT_CSV,
                         help="Path to write the standardized CSV.")
+    parser.add_argument("--record_id_prefix", type=str, default=None,
+                        help="If given, mint a per-row AutoTPD_ID with this prefix, "
+                             "e.g. --record_id_prefix AUTOTPD-PROTAC -> AUTOTPD-PROTAC-000001.")
+    parser.add_argument("--unmapped_report", type=str, default=None,
+                        help="If given, write values without a mapping entry to this JSON file.")
     args = parser.parse_args()
 
     input_csv = args.input_csv
@@ -1777,22 +2257,35 @@ def main():
 
     df_llm = pd.read_csv(input_csv)
 
-    print("\n--- Stage 1/4: Cell line standardization ---")
+    print("\n--- Stage 1/6: Cell line standardization ---")
     df_llm, cl_info = standardize_cell_lines(df_llm)
     taxid_to_species = build_taxid_to_species(cl_info)
 
-    print("\n--- Stage 2/4: Degradation target enrichment ---")
+    print("\n--- Stage 2/6: Degradation target enrichment ---")
     df_llm = clean_and_enrich_poi(df_llm, taxid_to_species)
 
-    print("\n--- Stage 3/4: Recruiter enrichment ---")
+    print("\n--- Stage 3/6: Recruiter enrichment ---")
     df_llm = clean_and_enrich_e3(df_llm, taxid_to_species)
 
-    print("\n--- Stage 4/4: DC50 / Dmax / Dmax_conc standardization ---")
+    print("\n--- Stage 4/6: DC50 / Dmax / Dmax_conc standardization ---")
     df_llm = standardize_dc50(df_llm, input_csv)
     df_llm = standardize_dmax(df_llm, input_csv)
     df_llm = standardize_dmax_conc(df_llm, input_csv)
 
+    print("\n--- Stage 5/6: Assay standardization ---")
+    df_llm = standardize_assay(df_llm)
+
+    print("\n--- Stage 6/6: SMILES canonicalization ---")
+    df_llm = standardize_smiles(df_llm)
+
     df_llm = _place_after(df_llm, "IUPAC_Name", ["IUPAC_Name_Source"])
+
+    if args.record_id_prefix:
+        print()
+        df_llm = add_autotpd_id(df_llm, args.record_id_prefix)
+
+    if args.unmapped_report:
+        write_unmapped_report(df_llm, args.unmapped_report, input_csv)
 
     out_path = Path(output_csv)
     out_path.parent.mkdir(parents=True, exist_ok=True)

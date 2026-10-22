@@ -1,37 +1,37 @@
-"""Shared RDKit SMILES canonicalization.
 
-Every dataset in this project - AutoTPD (LLM-extracted), the PROTAC-DB /
-MolGlueDB baselines, and the manual ground truth - carries SMILES strings that
-were written by different toolkits (PubChem, ChEMBL, the source databases, the
-LLM). The same molecule therefore appears as different strings depending on the
-source, which makes any string-level structure comparison meaningless.
 
-This module is the single canonicalization function all of them go through:
 
-    Raw SMILES
-        |
-        v
-    RDKit parse            (Chem.MolFromSmiles)
-        |
-        v
-    chemical standardization
-        - Cleanup           sanitize, disconnect metals, normalize, reionize
-        - largest fragment  drop salts / counterions
-        - uncharge          neutralize where chemically sensible
-        |
-        v
-    canonical SMILES       (isomeric: stereochemistry is preserved)
 
-Stereochemistry is deliberately kept, because compound matching downstream
-distinguishes stereoisomers that share a Connectivity_Key.
 
-Used as a stage of scripts/data_standardization.py (which is the shared
-standardization path for both AutoTPD and the baselines), and runnable on its
-own for any other CSV:
 
-    pixi run python -m tpd_curator.preprocessing.smiles_standardization \\
-        --input_csv data/evaluation/protacs/ground_truth/PROTAC-GT.csv
-"""
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 import argparse
 from functools import lru_cache
@@ -41,7 +41,7 @@ import pandas as pd
 from rdkit import Chem, RDLogger
 from rdkit.Chem.MolStandardize import rdMolStandardize
 
-# RDKit prints parse failures to stderr; we report them ourselves instead.
+
 RDLogger.DisableLog("rdApp.*")
 
 _MISSING_TOKENS = {"n/a", "na", "nan", "none", "-", ""}
@@ -49,12 +49,12 @@ _MISSING_TOKENS = {"n/a", "na", "nan", "none", "-", ""}
 _LARGEST_FRAGMENT = rdMolStandardize.LargestFragmentChooser(preferOrganic=True)
 _UNCHARGER = rdMolStandardize.Uncharger()
 
-# Status codes returned per SMILES string.
-MISSING = "missing"            # no SMILES to canonicalize
-UNCHANGED = "unchanged"        # input string was already the canonical form
-CANONICALIZED = "canonicalized"  # same molecule, different string
-STANDARDIZED = "standardized"  # chemical standardization altered the structure
-PARSE_FAILED = "parse_failed"  # RDKit could not read the string
+
+MISSING = "missing"
+UNCHANGED = "unchanged"
+CANONICALIZED = "canonicalized"
+STANDARDIZED = "standardized"
+PARSE_FAILED = "parse_failed"
 
 
 def _is_missing(raw) -> bool:
@@ -76,7 +76,7 @@ def _canonicalize(s: str) -> tuple[str | None, str]:
         std = _LARGEST_FRAGMENT.choose(std)
         std = _UNCHARGER.uncharge(std)
     except Exception:
-        # A molecule RDKit can read but not standardize still gets canonicalized.
+
         return parsed, CANONICALIZED if parsed != s else UNCHANGED
 
     canonical = Chem.MolToSmiles(std, isomericSmiles=True, canonical=True)
@@ -89,12 +89,12 @@ def _canonicalize(s: str) -> tuple[str | None, str]:
 
 
 def canonicalize_smiles(raw) -> tuple[str | None, str]:
-    """Canonicalize one SMILES string.
 
-    Returns (canonical_smiles, status). On a parse failure the canonical value
-    is None and the caller decides what to keep - data_standardization.py keeps
-    the original string rather than dropping it.
-    """
+
+
+
+
+
     if _is_missing(raw):
         return None, MISSING
     return _canonicalize(str(raw).strip())
@@ -112,13 +112,13 @@ def _inchikey(s: str) -> str | None:
 
 
 def inchikey_from_smiles(raw) -> str | None:
-    """Full InChIKey of a SMILES string, via the same standardization path.
 
-    Unlike Connectivity_Key (the first 14 characters, which encode connectivity
-    only) this keeps the stereochemistry layer, so stereoisomers stay distinct.
-    Computing it from the canonical SMILES means AutoTPD and the baselines get
-    their compound key from one function rather than from each source database.
-    """
+
+
+
+
+
+
     if _is_missing(raw):
         return None
     return _inchikey(str(raw).strip())
@@ -130,7 +130,7 @@ def add_compound_key(
     key_column: str = "Compound_Key",
     verbose: bool = True,
 ) -> pd.DataFrame:
-    """Add `key_column`, the InChIKey computed from `smiles_column`."""
+
     if smiles_column not in df.columns:
         if verbose:
             print(f"Column '{smiles_column}' not present, skipping compound key")
@@ -158,10 +158,10 @@ def canonicalize_smiles_column(
     column: str = "SMILES",
     verbose: bool = True,
 ) -> tuple[pd.DataFrame, dict[str, int]]:
-    """Canonicalize `column` in place, keeping unparsable strings untouched.
 
-    Returns the DataFrame and a status -> count summary.
-    """
+
+
+
     if column not in df.columns:
         if verbose:
             print(f"Column '{column}' not present, skipping SMILES canonicalization")
@@ -171,7 +171,7 @@ def canonicalize_smiles_column(
     canonical = results.map(lambda r: r[0])
     statuses = results.map(lambda r: r[1])
 
-    # Missing stays missing; a string RDKit cannot parse is left as-is.
+
     keep_original = statuses.isin([MISSING, PARSE_FAILED])
     df[column] = canonical.where(~keep_original, df[column]).astype("string")
 

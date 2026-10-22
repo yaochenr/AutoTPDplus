@@ -42,7 +42,7 @@ rm_square_brackets_brackets = (re.compile(r'\[.*?\)'), "")
 
 find_headers = re.compile("(#{1,6}.*)\\n")
 def get_headers(md, verbose=False):
-    """Get all headers in markdown"""
+
     headers = []
     for match in find_headers.finditer(md):
         span = match.span()
@@ -113,7 +113,7 @@ def clean_md(md_path, sections_to_remove):
 def clean_pdf_data(pdf_path: Union[str, Path], output_dir: Union[str, Path],
                    sections_to_remove: Optional[List[str]] = None, 
                    save_images: bool = False) -> List[Dict[str, Any]]:
-    """Clean PDF data by converting to markdown and then cleaning"""
+
     from ..preprocessing.convert_pdf_to_md import convert_pdf_to_md
     from marker.config.parser import ConfigParser
     
@@ -164,7 +164,7 @@ def clean_pdf_data(pdf_path: Union[str, Path], output_dir: Union[str, Path],
 def clean_pmc_data(pmc_path: Union[str, Path], 
                    output_dir: Union[str, Path],
                    fields_to_remove: Optional[List[str]] = None) -> int:
-    """Clean PMC processed"""
+
     if fields_to_remove is None:
         fields_to_remove = ["extraction_date", "sections", "references"]
     
@@ -238,7 +238,7 @@ def clean_pmc_data(pmc_path: Union[str, Path],
 
 def clean_data_auto(input_path: Union[str, Path], output_dir: Union[str, Path],
                     data_type: Optional[str] = None, **kwargs) -> List[Dict[str, Any]]:
-    """Automatically detect input type and clean data accordingly"""
+
     input_path = Path(input_path)
     output_dir = Path(output_dir)
     
@@ -273,7 +273,7 @@ def clean_data_auto(input_path: Union[str, Path], output_dir: Union[str, Path],
 
 def save_cleaned_data(cleaned_data: List[Dict[str, Any]], output_dir: Union[str, Path],
                       file_prefix: str = "cleaned") -> List[Path]:
-    """Save cleaned data to JSON files"""
+
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     
