@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
 
-
-
-
-
-
 from __future__ import annotations
 
 import hashlib
@@ -28,7 +23,6 @@ from sklearn.metrics import (
     roc_auc_score,
 )
 
-
 ROOT = Path(__file__).resolve().parents[2]
 CORPORA = ("AutoTPDplus", "PROTACDB")
 DEFAULT_AUTO = ROOT / "data/release/AutoTPDplus-PROTAC-training.csv"
@@ -51,7 +45,6 @@ class LeakageAudit:
 
 
 def file_hash(path: Path) -> str:
-
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for block in iter(lambda: handle.read(1024 * 1024), b""):
@@ -68,7 +61,6 @@ def filter_leakage(
     test: pd.DataFrame,
     corpus: str,
 ) -> tuple[pd.DataFrame, LeakageAudit]:
-
     from tack_holdout_training import compound_groups
     from tack_official_benchmark import canonical_smiles, normalize_doi
 
@@ -110,7 +102,6 @@ def build_splits(
     seed: int,
     output: Path,
 ) -> dict[tuple[str, Task], list[dict[str, Any]]]:
-
     from tack_holdout_training import compound_groups, compound_splits
 
     result: dict[tuple[str, Task], list[dict[str, Any]]] = {}
@@ -183,5 +174,4 @@ def classification_metrics(y: np.ndarray, pred: np.ndarray) -> dict[str, float]:
 
 
 def metric_values(task: Task, y: np.ndarray, pred: np.ndarray) -> dict[str, float]:
-
     return classification_metrics(y, pred) if task == "activity" else regression_metrics(y, pred)

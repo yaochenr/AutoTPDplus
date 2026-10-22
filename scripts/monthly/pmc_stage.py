@@ -1,36 +1,5 @@
 #!/usr/bin/env python3
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 from __future__ import annotations
 
 import argparse
@@ -62,7 +31,6 @@ from pmc_miner.mining.citation_registry import (
     normalize_doi,
     write_registry,
 )
-
 
 REPO = Path(__file__).resolve().parents[2]
 PENDING = "pending_activity_screen"
@@ -100,7 +68,6 @@ def _utc_now() -> str:
 
 
 def classify(article: dict, paper_dir: Path) -> tuple[str, str, int, int]:
-
     sources = set(article.get("sources") or [])
     modalities = set(article.get("modalities") or [])
     from_mg_database = bool(sources & MG_DATABASES)
@@ -149,7 +116,6 @@ def read_doi_lists(paths: List[Path]) -> set:
 
 
 def mention_counts(processed) -> Dict[str, int]:
-
     counts = {"dc50": 0, "dmax": 0}
     for chunk in iter_text_chunks(processed):
         counts["dc50"] += len(DC50_RE.findall(chunk.text))
@@ -158,7 +124,6 @@ def mention_counts(processed) -> Dict[str, int]:
 
 
 def apply_manual_policies(records, cache: StorageManager) -> List[Dict[str, Any]]:
-
     decisions = []
     for record in records:
         if record.screening_status != MANUAL:
@@ -205,7 +170,6 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
     registry, catalog_summary = load_registry_json(registry_path)
     by_pmcid = lambda: {r.pmcid: r for r in registry.records() if r.pmcid}
 
-
     rejected_dois = read_doi_lists(args.rejected_dois)
     vetoed, retried = [], []
     for record in registry.records():
@@ -217,7 +181,6 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
             record.screening_status = PENDING
             retried.append(record.pmcid)
 
-
     search_counts: Dict[str, int] = {}
     if not args.skip_search:
         search_counts = add_pmc_search_results(registry, PMCClient(), args.max_results_per_query)
@@ -225,7 +188,6 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
 
     pending = {r.pmcid for r in registry.records() if r.screening_status == PENDING and r.pmcid}
     logging.info("Pending activity screen: %d articles", len(pending))
-
 
     screening_dir = work_dir / "screening"
     screen_summary: Dict[str, Any] = {}
@@ -244,7 +206,6 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
     index = by_pmcid()
     records = [index[pmcid] for pmcid in sorted(pending) if pmcid in index]
 
-
     cache = StorageManager(screening_dir / "screening_cache")
     decisions = apply_manual_policies(records, cache)
     write_csv(work_dir / "policy_decisions.csv", decisions, [
@@ -253,7 +214,6 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
     ])
     accepted = [r for r in records if r.screening_status == ACCEPTED and not r.confirmed_relevant]
     write_registry(registry, registry_path.parent, catalog_summary)
-
 
     papers_dir: Path = args.papers_dir
     staging = papers_dir / "_staging"
@@ -341,7 +301,6 @@ def main(argv=None) -> int:
         "download_failures",
     )}, indent=2))
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

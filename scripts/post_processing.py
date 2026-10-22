@@ -1,28 +1,5 @@
 #!/usr/bin/env python3
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 from __future__ import annotations
 
 import argparse
@@ -35,7 +12,6 @@ from urllib.parse import quote
 import pandas as pd
 import pubchempy as pcp
 import requests
-
 
 OPSIN_BASE = "https://www.ebi.ac.uk/opsin/ws"
 MISSING_TOKENS = {"", "-", "n/a", "na", "nan", "none", "null", "unknown"}
@@ -54,8 +30,6 @@ EXTRACTION_FILE_PROVENANCE_COLUMNS = (
 _DASH_CHARS = "‐‑‒–—―−﹣－"
 _DASH_TRANS = str.maketrans({char: "-" for char in _DASH_CHARS})
 
-
-
 DEFAULT_PUBCHEM_BLOCKLIST = {
     "Mei", "Po", "Le", "LC-4", "LC-6", "D10", "D12", "D15", "A13",
     "13b", "SC5", "SC7", "SC10", "DBt-10", "PS-6", "MD9", "Cpd 1",
@@ -63,7 +37,6 @@ DEFAULT_PUBCHEM_BLOCKLIST = {
 
 
 def has_value(value: Any) -> bool:
-
     if value is None or pd.isna(value):
         return False
     return str(value).strip().casefold() not in MISSING_TOKENS
@@ -98,7 +71,6 @@ def load_inputs(paths: list[Path]) -> pd.DataFrame:
 
 
 def remove_empty_activity(df: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame]:
-
     missing_columns = [column for column in ("DC50", "Dmax") if column not in df]
     if missing_columns:
         joined = ", ".join(missing_columns)
@@ -121,8 +93,6 @@ def prepare_columns(df: pd.DataFrame) -> pd.DataFrame:
         if column not in df:
             df[column] = pd.NA
 
-
-
     for value_column in ("IUPAC_Name", "SMILES"):
         source_column = SOURCE_COLUMNS[value_column]
         mark = df[value_column].map(has_value) & _missing_mask(df[source_column])
@@ -131,8 +101,6 @@ def prepare_columns(df: pd.DataFrame) -> pd.DataFrame:
 
 
 class LookupCache:
-
-
     def __init__(self, path: Path | None):
         self.path = path
         self.data: dict[str, dict[str, Any]] = {}
@@ -149,7 +117,6 @@ class LookupCache:
         return self.data.get(key)
 
     def put(self, key: str, result: dict[str, Any]) -> None:
-
         if result.get("status") in {"ok", "not_found"}:
             self.data[key] = result
 
@@ -200,9 +167,6 @@ def query_opsin(iupac_name: str, session: requests.Session) -> dict[str, Any]:
 
 
 def _compound_result(compound: Any) -> dict[str, Any]:
-
-
-
     smiles = (
         getattr(compound, "smiles", None)
         or getattr(compound, "connectivity_smiles", None)
@@ -217,7 +181,6 @@ def _compound_result(compound: Any) -> dict[str, Any]:
 
 
 def query_pubchem_name(query: str, session: requests.Session) -> dict[str, Any]:
-
     try:
         compounds = pcp.get_compounds(query, "name")
         if not compounds:
@@ -325,8 +288,6 @@ def enrich_with_pubchem(
     failures: list[dict[str, Any]] = []
     stats = {"queries": 0, "cache_hits": 0, "matched": 0,
              "smiles_filled": 0, "iupac_filled": 0, "inchikey_filled": 0}
-
-
 
     needs = (
         _missing_mask(df["SMILES"])
@@ -545,7 +506,6 @@ def main() -> None:
         minimum_name_length=args.minimum_name_length,
         keep_source_provenance=args.keep_source_provenance,
     )
-
 
 if __name__ == "__main__":
     main()

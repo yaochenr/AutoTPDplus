@@ -1,4 +1,3 @@
-
 from __future__ import annotations
 
 import copy
@@ -13,7 +12,6 @@ from tack_benchmark_common import file_hash, metric_values
 
 
 def guard_run_manifest(args):
-
     excluded = {'output_dir', 'fold_ids'}
     payload = {'arguments': {k: str(v) if isinstance(v, Path) else v
                              for k, v in vars(args).items() if k not in excluded},
@@ -35,7 +33,6 @@ def guard_run_manifest(args):
 
 
 def repeated_splits(frame, task, samples, fraction, seed):
-
     seen = set()
     labels = frame.Activity.to_numpy() if task == 'activity' else None
     for sample in range(samples):
@@ -57,12 +54,6 @@ def repeated_splits(frame, task, samples, fraction, seed):
 
 
 def compound_groups(frame):
-
-
-
-
-
-
     from tack_official_benchmark import canonical_smiles
     parent = list(range(len(frame)))
 
@@ -92,11 +83,6 @@ def compound_groups(frame):
 
 
 def compound_splits(frame, samples, fraction, seed):
-
-
-
-
-
     groups = compound_groups(frame)
     unique, counts = np.unique(groups, return_counts=True)
     if len(unique) < 2:
@@ -143,9 +129,7 @@ def compound_split_audit(frame, splits):
             'group_by_position': groups.tolist(), 'samples': rows}
 
 
-
 def shared_activity_pca_dimensions(corpora, args):
-
     audit = []
     widths = np.array([44, 7])
     for corpus, frame in corpora.items():
@@ -163,6 +147,7 @@ def shared_activity_pca_dimensions(corpora, args):
     return result, {'requested_dimensions': [44, 7], 'used_dimensions': list(result),
                     'policy': 'minimum of requested width and training unique-protein count minus one, across both corpora and all samples; test data unused',
                     'training_counts': audit}
+
 
 def validate_predictions(frame, expected, sample):
     if len(frame) != len(expected) or frame['_Benchmark_Row_ID'].duplicated().any():
@@ -196,7 +181,6 @@ def resolve_splits(train, corpus, task, args):
 
 
 def validate_reference_experiment(args, trains, tests, load_yaml, best_configs):
-
     reference = args.split_reference
     if reference.resolve() == args.output_dir.resolve():
         raise ValueError('Reference and output directories must differ')
@@ -262,7 +246,6 @@ def validate_reference_experiment(args, trains, tests, load_yaml, best_configs):
 
 
 def prepare_training_target(frame, task, args):
-
     if task != 'pdc50' or getattr(args, 'pdc50_target', 'dc50-quantile') != 'direct-pdc50':
         return frame
     from tack_official_benchmark import direct_pdc50_from_nm
@@ -321,7 +304,6 @@ def run_repeated_holdout(corpus, task, train, test, args, run_cv, load_yaml, bes
             config = copy.deepcopy(config)
             config['model_config']['seed'] = split['model_seed']
             if direct:
-
                 for matrix, indices in [(dtrain, split['train_idx']), (dval, split['test_idx'])]:
                     np.testing.assert_allclose(matrix.get_label(), train.iloc[indices]['pDC50'],
                                                rtol=1e-6, atol=1e-6)
@@ -408,7 +390,6 @@ def run_repeated_holdout(corpus, task, train, test, args, run_cv, load_yaml, bes
 
 
 def paired_bootstrap(task, y, auto_pred, baseline_pred, clusters, n_boot, seed):
-
     a, b = metric_values(task, y, auto_pred), metric_values(task, y, baseline_pred)
     clusters = np.asarray(clusters).astype(str)
     unique = np.unique(clusters)
@@ -467,7 +448,6 @@ def save_repeat_metrics(long, output):
 
 
 def write_reference_comparison(args):
-
     direct = getattr(args, 'pdc50_target', 'dc50-quantile') == 'direct-pdc50'
     current_name, reference_name = ('direct_pdc50', 'dc50_quantile') if direct else ('fixed', 'hpo')
     prefix = 'quantile_vs_direct_pdc50' if direct else 'hpo_vs_fixed'

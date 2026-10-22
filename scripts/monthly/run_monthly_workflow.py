@@ -1,32 +1,5 @@
 #!/usr/bin/env python3
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 from __future__ import annotations
 
 import argparse
@@ -44,7 +17,6 @@ from typing import Any
 
 import pandas as pd
 import yaml
-
 
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO))
@@ -69,7 +41,6 @@ def _load(name: str, path: Path):
     sys.modules[name] = module
     spec.loader.exec_module(module)
     return module
-
 
 build = _load("build_autotpdplus", REPO / "scripts" / "build_autotpdplus.py")
 mapping_agent = _load(
@@ -101,10 +72,6 @@ def csv_rows(path: Path) -> int | None:
 
 def file_sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
-
-
-
-
 
 
 class Context:
@@ -174,10 +141,6 @@ def python_env() -> dict[str, str]:
     return {"PYTHONPATH": str(REPO) + os.pathsep + os.environ.get("PYTHONPATH", "")}
 
 
-
-
-
-
 def stage_pmc(ctx: Context) -> None:
     cfg = ctx.config["pmc"]
     work = ctx.work / "pmc"
@@ -220,7 +183,6 @@ def accepted_list(ctx: Context, modality: str) -> list[dict[str, Any]]:
 
 
 def extraction_files(results_dir: Path) -> list[Path]:
-
     suffixes = ("_extraction.json", "_supplementary_extraction.json", "_final_review.json")
     return [p for p in results_dir.rglob("*.json") if p.name.endswith(suffixes)]
 
@@ -240,7 +202,6 @@ def stage_extract(ctx: Context) -> None:
             run_logged([sys.executable, REPO / "scripts" / "sync_pmc_supplements.py",
                         "--papers-dir", paper_dir, "--report-dir", work / "supplements", "--extract-zips"],
                        ctx.log(f"extract_{modality}"), env=python_env())
-
 
         for name in ("output", "results"):
             shutil.rmtree(work / name, ignore_errors=True)
@@ -265,7 +226,6 @@ def stage_extract(ctx: Context) -> None:
                    ctx.log(f"extract_{modality}"), env=python_env())
         found = sorted((work / "results").glob("*/data_processed.csv"))
         if not found and not extraction_files(work / "results"):
-
             counts[modality] = 0
             continue
         if len(found) != 1:
@@ -318,7 +278,6 @@ def stage_standardize(ctx: Context, use_agent: bool = True) -> None:
     applied = 0
     agent_cfg = ctx.config.get("mapping_agent", {})
     if use_agent and not reports:
-
         write_json(ctx.updates / "mapping_changes.json",
                    {"run_label": ctx.month, "counts": {"applied": 0}, "changes": [], "key_lines": {}})
         (ctx.updates / "standardization_mapping_require_review.md").write_text(
@@ -348,7 +307,6 @@ def stage_standardize(ctx: Context, use_agent: bool = True) -> None:
 
 
 def snapshot_release(ctx: Context, dest: Path) -> None:
-
     if (dest / "complete").exists():
         return
     dest.mkdir(parents=True, exist_ok=True)
@@ -376,7 +334,6 @@ def snapshot_from_git(ctx: Context, ref: str, dest: Path) -> None:
 
 
 def merge_from_snapshot(ctx: Context, snapshot: Path) -> dict[str, Any]:
-
     state = build.load_state(snapshot / "state.json")
     next_ids = state.get("next_id", {})
     retired_before = build.load_retired(snapshot / "retired_ids.csv")
@@ -421,10 +378,6 @@ def stage_merge(ctx: Context, snapshot: Path) -> None:
     ctx.mark("merge", "done", appended={m: r.report["appended_rows"] for m, r in results.items()})
 
 
-
-
-
-
 def _check(checks: list[dict[str, Any]], name: str, status: str, detail: Any = "") -> None:
     checks.append({"name": name, "status": status, "detail": detail})
 
@@ -458,7 +411,6 @@ def stage_qc(ctx: Context, snapshot: Path, mapping_base: Path | None, reviewer_e
         missing = [c for c in REQUIRED_STD_COLUMNS if c not in std.columns]
         activity = [c for c in ACTIVITY_COLUMNS if c in std.columns]
         if activity:
-
             empty = int((std[activity] == "").all(axis=1).sum())
             _check(checks, f"{modality}: DC50 or Dmax present", "fail" if empty else "pass", f"{empty} rows without either")
         _check(checks, f"{modality}: standardized schema", "fail" if missing else "pass", missing)
@@ -533,10 +485,6 @@ def restore_release(ctx: Context, snapshot: Path) -> None:
         shutil.copy2(snapshot / "retired_ids.csv", ctx.retired)
     elif ctx.retired.exists():
         ctx.retired.unlink()
-
-
-
-
 
 
 def write_summary(ctx: Context, outcome: str, failure: str | None = None) -> Path:
@@ -625,10 +573,6 @@ def write_summary(ctx: Context, outcome: str, failure: str | None = None) -> Pat
     return path
 
 
-
-
-
-
 def load_config(path: Path) -> dict[str, Any]:
     return yaml.safe_load(path.read_text(encoding="utf-8"))
 
@@ -643,8 +587,6 @@ def command_run(args: argparse.Namespace) -> int:
     ctx.updates.mkdir(parents=True, exist_ok=True)
     stages = STAGES[STAGES.index(args.from_stage or STAGES[0]): STAGES.index(args.to_stage) + 1]
     if args.from_stage is None:
-
-
         stages = [s for s in stages if not (s in {"pmc", "extract"} and ctx.status.get(s, {}).get("status") == "done")]
 
     outcome, failure, stage = "completed", None, "setup"
@@ -745,7 +687,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     return command_run(args) if args.command == "run" else command_restandardize(args)
-
 
 if __name__ == "__main__":
     sys.exit(main())

@@ -1,22 +1,5 @@
 #!/usr/bin/env python3
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 from __future__ import annotations
 
 import argparse
@@ -25,7 +8,6 @@ import sys
 from pathlib import Path
 
 import yaml
-
 
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_CONFIG = REPO / "tpd_curator" / "config" / "monthly_update_workflow.yaml"
@@ -94,7 +76,6 @@ def main(argv: list[str] | None = None) -> int:
                      "--title", title, "--body-file", str(summary))
         print(created.stdout.strip())
     return 0
-
 
 if __name__ == "__main__":
     try:

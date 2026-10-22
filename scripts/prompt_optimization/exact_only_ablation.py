@@ -1,19 +1,5 @@
 #!/usr/bin/env python
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import os
 import sys
 import json
@@ -47,7 +33,6 @@ _ORIG = P.check_semantic_match
 
 
 def _exact_only(pred_value, labeled_value, feature=None, **kwargs):
-
     if pd.isna(pred_value) or pd.isna(labeled_value):
         return False
     return str(pred_value).strip().lower() == str(labeled_value).strip().lower()
@@ -103,7 +88,6 @@ def main():
     with open(os.path.join(OUT, "results.json"), "w") as fh:
         json.dump(results, fh, indent=2)
 
-
     def fmt(t):
         return f"P={t[0]:.2f} R={t[1]:.2f} F1={t[2]:.3f}"
 
@@ -127,7 +111,6 @@ def main():
         fh.write(md)
     print(f"\nwritten: {OUT}/results.json, {OUT}/table.md")
     print("\n" + md)
-
 
 if __name__ == "__main__":
     main()

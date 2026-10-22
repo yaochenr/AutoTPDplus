@@ -1,39 +1,5 @@
 #!/usr/bin/env python3
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 from __future__ import annotations
 
 import argparse
@@ -46,11 +12,9 @@ from typing import Any
 
 import pandas as pd
 
-
 ID_COLUMN = "AutoTPD_ID"
 ARTICLE_TYPE_COLUMN = "Source_Article_Type"
 ID_WIDTH = 6
-
 
 IDENTITY_COLUMNS = [
     "DOI",
@@ -73,10 +37,6 @@ CONFLICT_COLUMNS = [
     "DC50", "DC50_units", "Dmax", "source", "existing_AutoTPD_IDs",
 ]
 MISSING_DOI_TOKENS = {"", "unknown", "nan", "none", "null"}
-
-
-
-
 
 
 def read_table(path: Path) -> pd.DataFrame:
@@ -112,7 +72,6 @@ def sort_by_id(df: pd.DataFrame, prefix: str) -> pd.DataFrame:
 
 
 def load_article_types(path: Path | None) -> dict[str, str]:
-
     if path is None:
         return {}
     data = json.loads(path.read_text(encoding="utf-8"))
@@ -136,7 +95,6 @@ def annotate_article_type(df: pd.DataFrame, article_types: dict[str, str]) -> pd
 
 
 def conform_schema(df: pd.DataFrame, columns: list[str]) -> tuple[pd.DataFrame, list[str]]:
-
     dropped = [column for column in df.columns if column not in columns]
     df = df.copy()
     for column in columns:
@@ -168,10 +126,6 @@ def conflict_rows(df: pd.DataFrame, reason: str, existing_ids: dict[str, list[st
 def prepare_source(df: pd.DataFrame, renames: dict[str, str]) -> pd.DataFrame:
     df = df.rename(columns={old: new for old, new in renames.items() if old in df.columns})
     return df.drop(columns=[ID_COLUMN], errors="ignore")
-
-
-
-
 
 
 @dataclass
@@ -231,8 +185,6 @@ def bootstrap(
     baseline_replaced = baseline_doi.isin(autotpd_dois | large_scale_dois) & (baseline_doi != "")
     baseline_kept = baseline[~baseline_replaced]
 
-
-
     columns = ordered_union([ID_COLUMN], list(baseline.columns), list(autotpd.columns), [ARTICLE_TYPE_COLUMN])
     autotpd_part, _ = conform_schema(autotpd, columns)
     large_scale_part, large_scale_dropped = conform_schema(large_scale_df, columns)
@@ -281,10 +233,6 @@ def bootstrap(
     )
     report["validation_errors"] = errors
     return BuildResult(release=release, next_id=next_number, report=report, conflicts=conflicts_df)
-
-
-
-
 
 
 def incremental(
@@ -388,10 +336,6 @@ def incremental(
     return BuildResult(release=release, next_id=next_id_after, report=report, conflicts=conflicts_df, retired=retired)
 
 
-
-
-
-
 def validate_release(
     *,
     previous: pd.DataFrame | None,
@@ -439,10 +383,6 @@ def validate_release(
     return errors
 
 
-
-
-
-
 def load_state(path: Path) -> dict[str, Any]:
     if path.exists():
         return json.loads(path.read_text(encoding="utf-8"))
@@ -476,10 +416,6 @@ def write_outputs(result: BuildResult, args: argparse.Namespace) -> None:
         args.report.write_text(json.dumps(result.report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     if args.conflicts:
         write_table(result.conflicts, args.conflicts)
-
-
-
-
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -563,7 +499,6 @@ def main(argv: list[str] | None = None) -> int:
     print(json.dumps({k: report[k] for k in report if k not in {"article_type_rows", "appended_article_type_rows"}},
                      indent=2, ensure_ascii=False))
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

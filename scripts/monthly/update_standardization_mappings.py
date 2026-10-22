@@ -1,30 +1,5 @@
 #!/usr/bin/env python3
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 from __future__ import annotations
 
 import argparse
@@ -37,7 +12,6 @@ import sys
 from pathlib import Path
 from types import ModuleType
 from typing import Any, Callable
-
 
 KIND_MAPPING = {
     "cell_line": "CL_SEARCH_MAP",
@@ -84,10 +58,6 @@ KIND_INSTRUCTIONS = {
 }
 
 
-
-
-
-
 def load_module(path: Path, name: str = "data_standardization_under_edit") -> ModuleType:
     spec = importlib.util.spec_from_file_location(name, path)
     module = importlib.util.module_from_spec(spec)
@@ -97,7 +67,6 @@ def load_module(path: Path, name: str = "data_standardization_under_edit") -> Mo
 
 
 def merge_reports(paths: list[Path]) -> list[dict[str, Any]]:
-
     merged: dict[tuple[str, str], dict[str, Any]] = {}
     for path in paths:
         if not path.exists():
@@ -112,10 +81,6 @@ def merge_reports(paths: list[Path]) -> list[dict[str, Any]]:
             if dataset not in entry["datasets"]:
                 entry["datasets"].append(dataset)
     return [merged[key] for key in sorted(merged)]
-
-
-
-
 
 
 def build_prompt(kind: str, items: list[dict[str, Any]], module: ModuleType) -> str:
@@ -158,7 +123,6 @@ def parse_llm_json(text: str) -> list[dict[str, Any]]:
 
 
 def openrouter_proposer(model_name: str | None = None) -> Callable[[str], str]:
-
     from dotenv import load_dotenv
     from langchain_community.chat_models import ChatOpenAI
 
@@ -196,12 +160,7 @@ def propose(
     return proposals
 
 
-
-
-
-
 def verify(kind: str, value: str, proposal: dict[str, Any], module: ModuleType) -> tuple[bool, Any, str]:
-
     decision = proposal.get("decision")
     mapping = proposal.get("mapping")
 
@@ -262,7 +221,6 @@ def decide(
     proposals: dict[tuple[str, str], dict[str, Any]],
     module: ModuleType,
 ) -> list[dict[str, Any]]:
-
     changes = []
     for item in items:
         kind, value = item["kind"], item["value"]
@@ -296,10 +254,6 @@ def decide(
     return changes
 
 
-
-
-
-
 def format_literal(value: Any) -> str:
     if value is None:
         return "None"
@@ -311,7 +265,6 @@ def format_literal(value: Any) -> str:
 
 
 def find_dict_spans(source: str) -> dict[str, tuple[int, int]]:
-
     found: dict[str, tuple[int, int]] = {}
     for node in ast.parse(source).body:
         target, value = None, None
@@ -325,14 +278,12 @@ def find_dict_spans(source: str) -> dict[str, tuple[int, int]]:
 
 
 def patch_source(source: str, changes: list[dict[str, Any]], run_label: str) -> tuple[str, dict[str, list[int]]]:
-
     applied = [c for c in changes if c["status"] == "applied"]
     lines = source.splitlines(keepends=True)
     closing = {name: span[1] for name, span in find_dict_spans(source).items()}
     by_mapping: dict[str, list[dict[str, Any]]] = {}
     for change in applied:
         by_mapping.setdefault(change["mapping_name"], []).append(change)
-
 
     for mapping_name in sorted(by_mapping, key=lambda name: closing[name], reverse=True):
         index = closing[mapping_name]
@@ -375,10 +326,6 @@ def check_only_additions(before: ModuleType, after: ModuleType, changes: list[di
         if added != expected.get(mapping_name, {}):
             errors.append(f"{mapping_name}: added entries differ from the change list")
     return errors
-
-
-
-
 
 
 def _cell(value: Any) -> str:
@@ -456,10 +403,6 @@ def render_review(changes: list[dict[str, Any]], key_lines: dict[str, list[int]]
     return "\n".join(out) + "\n"
 
 
-
-
-
-
 def run(
     report_paths: list[Path],
     script_path: Path,
@@ -524,7 +467,6 @@ def main(argv: list[str] | None = None) -> int:
         return 1
     print(json.dumps(summary["counts"]))
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

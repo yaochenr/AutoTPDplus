@@ -9,7 +9,6 @@ from tpd_curator.pipeline import *
 
 
 class TeeLogger:
-
     def __init__(self, log_file, stream):
         self.log_file = log_file
         self.stream = stream
@@ -25,7 +24,6 @@ class TeeLogger:
 
 
 def setup_logging(results_dir: Path):
-
     log_file_path = results_dir / "pipeline_run.log"
 
     log_file = open(log_file_path, 'w', encoding='utf-8', buffering=1)
@@ -77,8 +75,6 @@ def main(args):
                 return 1
         else:
             print("Skip data cleaning step.")
-
-
 
         input_prompt_content = None
         if args.input_prompt:
@@ -258,7 +254,7 @@ if __name__ == '__main__':
     parser.add_argument("--no-chembl", action="store_true", help="Skip ChEMBL queries (only use PubChem for SMILES lookup).")
 
     args = parser.parse_args()
-    
+
     if not Path(args.config_path).exists():
         print(f"Error: The specified configuration file does not exist - {args.config_path}")
         exit(1)

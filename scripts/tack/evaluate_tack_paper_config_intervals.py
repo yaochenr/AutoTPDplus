@@ -1,12 +1,5 @@
 #!/usr/bin/env python3
 
-
-
-
-
-
-
-
 from __future__ import annotations
 
 import argparse
@@ -24,7 +17,6 @@ from tack_official_benchmark import (
     markdown_table,
     paired_interval_bootstrap,
 )
-
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_RESULTS = ROOT / "results/tack_paper_config_benchmark"
@@ -65,7 +57,6 @@ def validate_long_predictions(long: pd.DataFrame) -> int:
     if sample_counts.nunique() != 1:
         raise ValueError(f"Inconsistent model counts: {sample_counts.to_dict()}")
     samples = int(sample_counts.iloc[0])
-
 
     for (corpus, task), part in selected.groupby(["corpus", "task"], sort=False):
         expected = part[part["sample"].eq(part["sample"].min())][KEY].tolist()
@@ -299,7 +290,6 @@ def main() -> None:
     print(point.to_string(index=False))
     print("\nInterval-aware metrics:")
     print(interval.to_string(index=False))
-
 
 if __name__ == "__main__":
     main()

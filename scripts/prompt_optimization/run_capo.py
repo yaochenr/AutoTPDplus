@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
 
-
 import argparse
 import sys
 from pathlib import Path
@@ -12,7 +11,6 @@ from tpd_curator.capo import Capo, PipelinePausedException
 
 
 class TeeLogger:
-
     def __init__(self, file_path, stream):
         self.file = open(file_path, 'a', encoding='utf-8')
         self.stream = stream
@@ -331,7 +329,6 @@ Examples:
         import traceback
         traceback.print_exc()
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

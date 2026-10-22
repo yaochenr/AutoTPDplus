@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
 
-
-
-
-
-
 from __future__ import annotations
 
 import argparse
@@ -27,18 +22,12 @@ import pandas as pd
 
 _rdkit_base = Path(sys.prefix) / "share" / "RDKit"
 
-
-
-
-
-
 if (_rdkit_base / "Data" / "FragmentDescriptors.csv").is_file():
     os.environ["RDBASE"] = str(_rdkit_base)
 
 from rdkit import Chem, RDConfig, rdBase
 from rdkit.Chem import Descriptors
 from rdkit.Chem.Scaffolds import MurckoScaffold
-
 
 ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_TACK = Path("/Users/yaochenr/project/TACK")
@@ -167,7 +156,6 @@ def scaffold(value: str) -> str:
 
 
 def cache_molecular_descriptors(frames: list[pd.DataFrame]) -> int:
-
     from tackai.data.embeddings.mol_embeddings import MolEmbedding
 
     smiles = {
@@ -190,7 +178,6 @@ def cache_molecular_descriptors(frames: list[pd.DataFrame]) -> int:
 
 
 def validate_descriptor_cache(path: Path, expected_width: int) -> int:
-
     if not path.is_file():
         return 0
     invalid: list[tuple[str, tuple[int, ...]]] = []
@@ -211,17 +198,11 @@ def validate_descriptor_cache(path: Path, expected_width: int) -> int:
         )
     return count
 
-
 _BATCH_RAW_FEATURE_CACHE: dict[Any, np.ndarray] = {}
 
 
 def install_tack_acceleration(batch_featurization: bool,
                               read_only_cell_cache: bool = False) -> None:
-
-
-
-
-
 
     if batch_featurization:
         from datasets import Dataset
@@ -270,7 +251,6 @@ def install_tack_acceleration(batch_featurization: bool,
 
 
 def cache_cell_embeddings(frames: list[pd.DataFrame]) -> int:
-
     from tackai.data.embeddings.cell_embeddings import CellEmbedding
     values = sorted({str(value) for frame in frames
                      for value in frame["Cell_Line_ID"].dropna().unique()})
@@ -597,7 +577,6 @@ def pdc50_from_nm(values: np.ndarray) -> np.ndarray:
 
 
 def direct_pdc50_from_nm(values: np.ndarray) -> np.ndarray:
-
     values = np.asarray(values, dtype=float)
     if not np.isfinite(values).all() or (values <= 0).any():
         raise ValueError("Direct pDC50 requires finite positive DC50 values in nM")
@@ -605,22 +584,12 @@ def direct_pdc50_from_nm(values: np.ndarray) -> np.ndarray:
 
 
 def direct_pdc50_to_metric(values: np.ndarray) -> np.ndarray:
-
-
-
-
-
     return -np.logaddexp(-np.asarray(values, dtype=float) * np.log(10.0),
                         np.log(1e-12)) / np.log(10.0)
 
 
 def interval_bounds(task: Task, values: np.ndarray,
                     operators: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
-
-
-
-
-
 
     values = np.asarray(values, dtype=float)
     operators = np.asarray(operators, dtype=object)
@@ -675,7 +644,6 @@ def paired_interval_bootstrap(
     n_boot: int,
     seed: int,
 ) -> tuple[pd.DataFrame, np.ndarray, np.ndarray]:
-
     lower, upper = interval_bounds(task, values, operators)
     observed_auto = interval_metric_values(auto_prediction, lower, upper)
     observed_baseline = interval_metric_values(baseline_prediction, lower, upper)
@@ -703,7 +671,6 @@ def paired_interval_bootstrap(
         boot = np.asarray(samples[metric], dtype=float)
         ci_low, ci_high = np.quantile(boot, [0.025, 0.975])
 
-
         left_tail = (int(np.sum(boot <= 0)) + 1) / (len(boot) + 1)
         right_tail = (int(np.sum(boot >= 0)) + 1) / (len(boot) + 1)
         p_two_sided = min(1.0, 2.0 * min(left_tail, right_tail))
@@ -729,7 +696,6 @@ def ensemble_predictions(long: pd.DataFrame, task: Task) -> pd.DataFrame:
     if task == "pdc50":
         space = work.get("_Prediction_Space", pd.Series("dc50-nm", index=work.index))
         if space.eq("pdc50").all():
-
             work["metric_target"] = pdc50_from_nm(work["DC50"])
             work["metric_pred"] = direct_pdc50_to_metric(work["pred"])
         elif space.eq("dc50-nm").all():
@@ -1101,10 +1067,6 @@ def main() -> None:
     comparison_df["bootstrap_p_holm_primary"] = np.nan
     primary_p = comparison_df.loc[primary_mask, "bootstrap_p_two_sided"].to_numpy()
     if args.pdc50_target == "direct-pdc50" and args.split_reference is not None:
-
-
-
-
         reference_frames, visited = [], set()
         reference_dir = args.split_reference
         while reference_dir is not None:
@@ -1203,7 +1165,6 @@ def main() -> None:
         "sample_ids": args.fold_ids if args.fold_ids is not None else list(range(total_folds)),
         "final_models": sum(p["prediction_files"] for p in provenance),
     }, indent=2) + "\n")
-
 
 if __name__ == "__main__":
     main()

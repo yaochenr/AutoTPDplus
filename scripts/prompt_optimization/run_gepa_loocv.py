@@ -1,26 +1,5 @@
 #!/usr/bin/env python3
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import argparse
 import json
 import statistics
@@ -51,7 +30,6 @@ METRIC_KEYS = ("part1_precision", "part1_recall", "part2_precision", "part2_reca
 
 
 def load_papers(gt_csv: Path, filter_file: Path):
-
     df = pd.read_csv(gt_csv)
     doi_col = "DOI" if "DOI" in df.columns else df.columns[0]
     dois = sorted(d for d in df[doi_col].dropna().unique().tolist() if str(d).strip())
@@ -66,7 +44,6 @@ def load_papers(gt_csv: Path, filter_file: Path):
 
 
 def make_reflection_lm():
-
     def _lm(prompt: str) -> str:
         text, _ = run_llm_api(custom_prompt=prompt, paper_text=None, temperature=1.0)
         if isinstance(text, (list, dict)):
@@ -140,7 +117,6 @@ def run_fold(fold_idx, papers, args, reflection_lm, out_root):
     best_val = result.val_aggregate_scores[result.best_idx]
     best_prompt = candidate_to_prompt(best, seed_prompt_text)
     (fold_dir / "best_prompt.md").write_text(best_prompt, encoding="utf-8")
-
 
     gepa_eval = adapter.evaluate([test], best, capture_traces=False)
     gepa_test = gepa_eval.outputs[0]["metrics"]
@@ -280,7 +256,6 @@ def main():
     else:
         print("No folds completed successfully.")
         sys.exit(1)
-
 
 if __name__ == "__main__":
     main()

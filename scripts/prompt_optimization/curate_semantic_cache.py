@@ -1,31 +1,5 @@
 #!/usr/bin/env python3
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import argparse
 import json
 import sys
@@ -42,7 +16,6 @@ METRIC_KEYS = rg.METRIC_KEYS
 
 
 def evaluate_paper(capo, paper, work_dir, reextract):
-
     doi = paper["doi"]
     pmc_id = paper.get("pmc_id")
     safe_doi = doi.replace("/", "_").replace(":", "_")
@@ -56,7 +29,6 @@ def evaluate_paper(capo, paper, work_dir, reextract):
     else:
         print(f"  [{doi}] extracting (3-round LLM) + evaluating ...")
 
-
         capo.config["data"]["output_dir"] = str(work_dir / f"clean_{safe_doi}")
         try:
             _pipeline.store.clear()
@@ -69,7 +41,6 @@ def evaluate_paper(capo, paper, work_dir, reextract):
 
 
 def load_cache_index(cache_file):
-
     if not Path(cache_file).exists():
         return {}
     try:
@@ -88,8 +59,6 @@ def load_cache_index(cache_file):
 
 
 def show_cache_changes(before, after):
-
-
     added = [(k, after[k]) for k in after if k not in before]
     changed = [(k, before[k], after[k]) for k in after
                if k in before and after[k] != before[k]]
@@ -154,14 +123,11 @@ def main():
     capo.config["evaluation"]["labeled_data_path"] = str(args.gt_csv)
     capo.config["evaluation"]["cache_file_path"] = str(args.cache_file)
 
-
-
     cache_before = load_cache_index(args.cache_file)
 
     results = {}
     for paper in papers:
         results[paper["doi"]] = evaluate_paper(capo, paper, work_dir, args.reextract)
-
 
     print("\n" + "=" * 80)
     print("METRICS (with the current cache)")
@@ -187,7 +153,6 @@ def main():
     print("3. When the metrics look right, run the GEPA LOOCV (it reuses this cache):")
     print("     pixi run python scripts/prompt_optimization/run_gepa_loocv.py")
     print("=" * 80)
-
 
 if __name__ == "__main__":
     main()

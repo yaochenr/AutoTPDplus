@@ -1,16 +1,3 @@
-
-
-
-
-
-
-
-
-
-
-
-
-
 import json
 import random
 from pathlib import Path
@@ -71,7 +58,6 @@ def embed(smi, seed):
             return None
     AllChem.MMFFOptimizeMolecule(mol, maxIters=1000)
     mol = Chem.RemoveHs(mol)
-
 
     want = specified_centres(ref)
     probe = Chem.Mol(mol)
@@ -146,7 +132,6 @@ def main():
     OUT.write_text(json.dumps({"scale": QUANT, "molecules": molecules}, separators=(",", ":")))
     print(f"wrote {len(molecules)} molecules -> {OUT.relative_to(ROOT)} "
           f"({OUT.stat().st_size / 1024:.0f} KB)")
-
 
 if __name__ == "__main__":
     main()

@@ -1,22 +1,5 @@
 #!/usr/bin/env python3
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 from __future__ import annotations
 
 import argparse
@@ -35,7 +18,6 @@ from urllib.parse import quote, unquote, urlparse
 from xml.etree import ElementTree
 
 import requests
-
 
 S3_URL = "https://pmc-oa-opendata.s3.amazonaws.com/"
 USER_AGENT = "TPD-curator-supplement-sync/1.0 (mailto:research@example.com)"
@@ -57,7 +39,6 @@ GIB = 1024**3
 
 
 def local_name(tag: str) -> str:
-
     return tag.rsplit("}", 1)[-1]
 
 
@@ -66,7 +47,6 @@ def normalize_extensions(values: list[str]) -> set[str]:
 
 
 def referenced_supplement_basenames(xml_path: Path) -> set[str]:
-
     if not xml_path.is_file():
         return set()
     try:
@@ -89,7 +69,6 @@ def referenced_supplement_basenames(xml_path: Path) -> set[str]:
 
 
 def is_supplement_filename(filename: str, referenced: set[str]) -> bool:
-
     lower = filename.casefold()
     if lower in referenced:
         return True
@@ -106,7 +85,6 @@ def request_with_retry(
     stream: bool = False,
     timeout: int = 30,
 ) -> requests.Response:
-
     last_error: Exception | None = None
     for attempt in range(3):
         try:
@@ -127,7 +105,6 @@ def request_with_retry(
 
 
 def list_latest_s3_objects(pmcid: str) -> tuple[str, list[dict[str, Any]]]:
-
     try:
         response = request_with_retry(
             S3_URL,
@@ -161,7 +138,6 @@ def list_latest_s3_objects(pmcid: str) -> tuple[str, list[dict[str, Any]]]:
 
 
 def local_supplement_files(supplementary_dir: Path) -> dict[str, Path]:
-
     if not supplementary_dir.is_dir():
         return {}
     return {
@@ -174,7 +150,6 @@ def local_supplement_files(supplementary_dir: Path) -> dict[str, Path]:
 
 
 def audit_paper(paper_dir: Path) -> dict[str, Any]:
-
     pmcid = paper_dir.name
     referenced = referenced_supplement_basenames(paper_dir / "full_text.xml")
     manifest_status, objects = list_latest_s3_objects(pmcid)
@@ -209,7 +184,6 @@ def audit_paper(paper_dir: Path) -> dict[str, Any]:
 
 
 def download_object(article: dict[str, Any], item: dict[str, Any]) -> dict[str, Any]:
-
     supplementary_dir = Path(str(article["supplementary_dir"]))
     supplementary_dir.mkdir(parents=True, exist_ok=True)
     target = supplementary_dir / str(item["filename"])
@@ -265,7 +239,6 @@ def download_object(article: dict[str, Any], item: dict[str, Any]) -> dict[str, 
 
 
 def update_supplementary_metadata(paper_dir: Path) -> None:
-
     supplementary_dir = paper_dir / "supplementary"
     if not supplementary_dir.is_dir():
         return
@@ -313,7 +286,6 @@ def update_supplementary_metadata(paper_dir: Path) -> None:
 
 
 def zip_member_unsafe_reason(info: zipfile.ZipInfo) -> str | None:
-
     normalized = info.filename.replace("\\", "/")
     member_path = PurePosixPath(normalized)
     if not normalized or normalized.startswith("/") or member_path.is_absolute():
@@ -328,7 +300,6 @@ def zip_member_unsafe_reason(info: zipfile.ZipInfo) -> str | None:
 
 
 def scan_zip(zip_path: Path) -> dict[str, Any]:
-
     result: dict[str, Any] = {
         "pmcid": zip_path.parent.parent.name,
         "filename": zip_path.name,
@@ -384,7 +355,6 @@ def scan_zip(zip_path: Path) -> dict[str, Any]:
 
 
 def extract_zip(record: dict[str, Any]) -> dict[str, Any]:
-
     if record["scan_status"] != "safe":
         record["extraction_status"] = "skipped_unsafe"
         return record
@@ -646,7 +616,6 @@ def main() -> None:
     print(json.dumps(summary, indent=2))
     print(f"JSON report: {json_path}")
     print(f"CSV report: {csv_path}")
-
 
 if __name__ == "__main__":
     main()

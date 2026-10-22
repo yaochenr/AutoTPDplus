@@ -1,24 +1,5 @@
 #!/usr/bin/env python3
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 from __future__ import annotations
 
 import argparse
@@ -62,12 +43,10 @@ from tack_benchmark_common import (
     metric_values,
 )
 
-
 TASKS = ("pdc50", "dmax", "activity")
 DEFAULT_OUTPUT = ROOT / "results/tack_paper_config_benchmark"
 PAPER = "https://arxiv.org/abs/2605.19579"
 LABEL = {"pdc50": "pDC50", "dmax": "Dmax", "activity": "Activity"}
-
 
 PAPER_CONFIG = {
     "pdc50": {
@@ -92,7 +71,6 @@ STRONG_REGULARIZATION = {"min_child_weight": 5, "reg_alpha": 0.1, "reg_lambda": 
 
 
 def candidate_specs(threads: int, smoke: bool) -> dict[str, list[dict[str, Any]]]:
-
     mlp = []
     for hidden in ([256], [512, 256]):
         for lr in (0.00025, 0.00075, 0.002):
@@ -192,7 +170,6 @@ def prepare_task(source: pd.DataFrame, task: str, corpus: str, activity_labeler,
 
 
 def activity_pca_widths(trains, splits, samples: int) -> tuple[tuple[int, int], dict[str, Any]]:
-
     widths = np.array([44, 7])
     audit = []
     for corpus in CORPORA:
@@ -257,7 +234,6 @@ def build_module(frame: pd.DataFrame, split: dict[str, Any], task: str, config: 
 
 class XGBRunner:
     def __init__(self, module, has_test: bool):
-
         self.matrices = {"train": module.get_xgboost_dataset("train"),
                          "validation": module.get_xgboost_dataset("validation")}
         if has_test:
@@ -304,7 +280,6 @@ class MLPRunner:
         return {k: v if isinstance(v, torch.Tensor) else torch.stack(list(v)) for k, v in columns.items()}
 
     def loader(self, split: str, seed: int = 0):
-
         import torch
         from torch.utils.data import BatchSampler, DataLoader, Dataset, RandomSampler, SequentialSampler
 
@@ -327,7 +302,6 @@ class MLPRunner:
 
     @staticmethod
     def _kaiming_init(model) -> None:
-
         for name, param in model.named_parameters():
             if name.endswith(".bias"):
                 param.data.fill_(0)
@@ -429,7 +403,6 @@ def search(trains, splits, specs, configs, output: Path, samples: int) -> pd.Dat
 
 
 def select(scores: pd.DataFrame, specs, output: Path) -> dict[str, Any]:
-
     selection, rankings = {}, []
     for task in TASKS:
         part = scores[scores.task.eq(task)].copy()
@@ -598,7 +571,6 @@ def evaluate(long: pd.DataFrame, tests, output: Path, samples: int, bootstrap: i
 
 
 def summary_table(ensemble, per_model, baselines, comparison, counts, selection) -> pd.DataFrame:
-
     headline = {"pdc50": ("RMSE", "MAE"), "dmax": ("RMSE", "MAE"), "activity": ("ROC_AUC", "LogLoss")}
     rows = []
     for task in TASKS:
@@ -727,7 +699,6 @@ def main() -> None:
     selection = select(scores, specs, args.output_dir)
     print("SELECTION FROZEN " + " ".join(f"{t}={selection[t]['id']}" for t in TASKS), flush=True)
 
-
     tests, test_counts = {}, []
     for task in TASKS:
         tests[task] = prepare_task(raw_test, task, "held-out test", activity_labeler, protein_ids, True)
@@ -743,7 +714,6 @@ def main() -> None:
         "final_models": len(TASKS) * len(CORPORA) * args.samples,
         "selected": {t: selection[t]["id"] for t in TASKS}}, indent=2) + "\n")
     print(f"Completed: {args.output_dir / 'summary.md'}", flush=True)
-
 
 if __name__ == "__main__":
     try:

@@ -1,5 +1,3 @@
-
-
 import argparse
 import re
 import sys
@@ -19,10 +17,7 @@ from tpd_curator.preprocessing.smiles_standardization import (
 
 HUMAN = 9606
 
-
-
 UNMAPPED: dict[str, set[str]] = {}
-
 
 _ENGINEERING_HINT = re.compile(
     r"HiBiT|nLuc|NanoLuc|luciferase|Luc\b|GFP|mCherry|HaloTag|dTAG|FKBP|reporter|"
@@ -49,12 +44,7 @@ def _place_after(df: pd.DataFrame, anchor: str, followers: list[str]) -> pd.Data
     return df[new_cols]
 
 
-
-
-
-
 def _normalize_species(label: str | None) -> str | None:
-
     if not label:
         return None
     return re.sub(r"\s*\([^()]*\)\s*$", "", label).strip() or None
@@ -117,7 +107,6 @@ def cellosaurus_fetch(accession: str) -> dict | None:
     except Exception as e:
         print(f"  Cellosaurus fetch error for '{accession}': {e}")
     return None
-
 
 CL_SEARCH_MAP = {
     "22RV1":                "22Rv1",
@@ -400,8 +389,6 @@ CL_SEARCH_MAP = {
     "primary rat neonatal cardiomyocytes": None,
     "tau-P301L iPSC-derived neurons": None,
 
-
-
     "HeLa cells":                            "HeLa",
     "Jurkat E6.1":                           "Jurkat E6.1",
     "Jurkat +elacridar":                     "Jurkat",
@@ -416,24 +403,12 @@ CL_SEARCH_MAP = {
     "primary cells from chronic lymphocytic leukemia (CLL) patients": None,
 }
 
-
-
-
 CL_STD_OVERRIDE: dict[str, str] = {
     "FTD19-L5-RC6 (tau-A152T)":              "FTD19-L5-RC6",
     "G2019S LRRK2 MEFs":                     "MEFs",
     "MGH2046-RC1 (tau-P301L)":               "MGH2046-RC1",
     "TM3":                                   "TM3",
 }
-
-
-
-
-
-
-
-
-
 
 CL_MODIFICATION_MAP = {
 
@@ -474,19 +449,6 @@ CL_MODIFICATION_MAP = {
 
 
 def standardize_cell_lines(df_llm: pd.DataFrame) -> tuple[pd.DataFrame, dict]:
-
-
-
-
-
-
-
-
-
-
-
-
-
     cl_list = sorted(
         df_llm["Cell_Line"]
         .dropna()
@@ -587,10 +549,6 @@ def build_taxid_to_species(cl_info: dict) -> dict:
         if tid and sp:
             taxid_to_species[tid] = sp
     return taxid_to_species
-
-
-
-
 
 
 def parse_mutation(mut_str: str | None) -> tuple[str, int, str] | None:
@@ -718,7 +676,6 @@ def fetch_uniprot_record_by_accession(accession: str) -> dict | None:
         print(f"  UniProt accession fetch error for {accession}: {e}")
     return None
 
-
 _variation_cache: dict[str, list] = {}
 
 
@@ -774,11 +731,6 @@ def apply_mutation(sequence: str, wt_aa: str, position: int, mut_aa: str) -> str
         print(f"  apply_mutation: expected {wt_aa} at position {position}, found {sequence[idx]}")
         return None
     return sequence[:idx] + mut_aa + sequence[idx + 1:]
-
-
-
-
-
 
 poi_alias_map = {
     "BCL-XL": "Bcl-xL",
@@ -1225,7 +1177,6 @@ def clean_and_enrich_poi(df_llm: pd.DataFrame, taxid_to_species: dict) -> pd.Dat
             poi_info[(poi, org_id)] = info
             continue
 
-
         gene, gene_src = find_gene_symbol(search_term, org_id)
         info["gene"] = gene
         if gene:
@@ -1318,11 +1269,6 @@ def clean_and_enrich_poi(df_llm: pd.DataFrame, taxid_to_species: dict) -> pd.Dat
     ])
 
     return df_llm
-
-
-
-
-
 
 e3_alias_map = {
     "CEREBLON":           "CRBN",
@@ -1452,11 +1398,6 @@ def clean_and_enrich_e3(df_llm: pd.DataFrame, taxid_to_species: dict) -> pd.Data
 
     return df_llm
 
-
-
-
-
-
 _RAW_COLS = ["DC50_raw", "DC50_h_raw", "Dmax_raw", "Dmax_h_raw", "Dmax_conc_raw"]
 _INSERT_AFTER = {
     "DC50_h": ["DC50_operator", "DC50_range_min", "DC50_range_max"],
@@ -1482,7 +1423,6 @@ def reorder_standardized_columns(df: pd.DataFrame) -> pd.DataFrame:
         if col not in new_cols:
             new_cols.append(col)
     return df[new_cols]
-
 
 _MONTH_TO_NUMBER = {
     "jan": 1,
@@ -1522,7 +1462,6 @@ def _dc50_result(
 
 
 def _dc50_unit_factor_to_nm(unit: str | None) -> float | None:
-
     if unit is None:
         return None
     normalized = unit.strip().replace("µ", "u").replace("μ", "u").lower()
@@ -1576,9 +1515,6 @@ def parse_dc50(raw: str) -> dict:
         lo, hi = excel_date_range
         return _dc50_result(range_min=lo, range_max=hi)
 
-
-
-
     m = re.fullmatch(
         rf"({_DC50_NUMBER})\s*({_DC50_UNIT})?\s*(?:-|~)\s*"
         rf"({_DC50_NUMBER})\s*({_DC50_UNIT})?",
@@ -1598,9 +1534,6 @@ def parse_dc50(raw: str) -> dict:
                     units="nM",
                 )
         return _dc50_result(range_min=lo_value, range_max=hi_value)
-
-
-
 
     m = re.fullmatch(
         rf"(<=|>=|<|>|~)?\s*({_DC50_NUMBER})\s*({_DC50_UNIT})?",
@@ -1718,7 +1651,6 @@ def standardize_dc50(df_llm: pd.DataFrame, input_csv: str) -> pd.DataFrame:
         .str.strip()
         .replace({"nm": "nM", "nmol/L": "nM", "μM": "µM", "uM": "µM"})
     )
-
 
     df_llm["DC50_units"] = parsed["units"].astype("string").fillna(extracted_units)
 
@@ -1842,7 +1774,6 @@ def standardize_dmax(df_llm: pd.DataFrame, input_csv: str) -> pd.DataFrame:
     df_llm = reorder_standardized_columns(df_llm)
     return df_llm
 
-
 _EMPTY = {"value": None, "operator": None, "range_min": None, "range_max": None}
 
 
@@ -1960,21 +1891,7 @@ def standardize_dmax_conc(df_llm: pd.DataFrame, input_csv: str) -> pd.DataFrame:
     return df_llm
 
 
-
-
-
-
 def standardize_smiles(df: pd.DataFrame) -> pd.DataFrame:
-
-
-
-
-
-
-
-
-
-
     df, _ = canonicalize_smiles_column(df, column="SMILES")
     df = add_compound_key(df)
     df["Connectivity_Key"] = df["Compound_Key"].str[:14]
@@ -1983,22 +1900,10 @@ def standardize_smiles(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def add_autotpd_id(df: pd.DataFrame, prefix: str, width: int = 6) -> pd.DataFrame:
-
-
-
-
-
-
     df = df.drop(columns=["AutoTPD_ID"], errors="ignore")
     df.insert(0, "AutoTPD_ID", [f"{prefix}-{i:0{width}d}" for i in range(1, len(df) + 1)])
     print(f"AutoTPD_ID minted: {len(df)} rows, {df['AutoTPD_ID'].iloc[0]} .. {df['AutoTPD_ID'].iloc[-1]}")
     return df
-
-
-
-
-
-
 
 ASSAY_STD_MAP = {
 
@@ -2046,13 +1951,11 @@ ASSAY_STD_MAP = {
     "immunoblot (western blot) quantification of IDO1 protein levels": "Western blot",
     "In vivo tumor immunoblot (Western blot)":                        "Western blot",
 
-
     "capillary electrophoresis":                                      "Capillary immunoassay",
     "capillary electrophoresis (WES)":                                "Capillary immunoassay",
     "Capillary-based immunoassay (Simple Western)":                   "Capillary immunoassay",
     "Simple Western immunoassay (capillary-based)":                   "Capillary immunoassay",
     "Automated capillary Western blot (JESS)":                        "Capillary immunoassay",
-
 
     "HiBiT":                                                          "HiBiT",
     "HiBit":                                                          "HiBiT",
@@ -2072,12 +1975,10 @@ ASSAY_STD_MAP = {
     "IKZF1-HiBiT kinetic degradation assay":                          "HiBiT",
     "GSPT1-HiBiT endpoint degradation assay":                         "HiBiT",
 
-
     "NanoLuc degradation kinetics":                                   "NanoLuc reporter",
     "NanoLuc reporter assay (BTK-nLuc), endpoint":                    "NanoLuc reporter",
     "NanoLuc reporter assay (IKZF1-nLuc), endpoint":                  "NanoLuc reporter",
     "NanoLuc reporter assay (IKZF3-nLuc), endpoint":                  "NanoLuc reporter",
-
 
     "MSD":                                                            "MSD",
     "MSD assay":                                                      "MSD",
@@ -2086,13 +1987,10 @@ ASSAY_STD_MAP = {
     "MSD (+elacridar pretreatment)":                                  "MSD",
     "MSD (\u2212elacridar pretreatment)":                              "MSD",
 
-
     "ELISA":                                                          "ELISA",
     "in-cell ELISA":                                                  "ELISA",
 
-
     "HTRF":                                                           "HTRF",
-
 
     "Flow cytometry":                                                 "Flow cytometry",
     "flow cytometry":                                                 "Flow cytometry",
@@ -2109,7 +2007,6 @@ ASSAY_STD_MAP = {
     "flow cytometry (anti-MERTK-PE)":                                 "Flow cytometry",
     "flow cytometry (anti-EGFR-PE on EGFR/TAM chimera)":              "Flow cytometry",
 
-
     "Immunofluorescence":                                             "Fluorescence imaging",
     "immunofluorescence assay":                                       "Fluorescence imaging",
     "immunofluorescence imaging":                                     "Fluorescence imaging",
@@ -2117,16 +2014,13 @@ ASSAY_STD_MAP = {
     "Imaging-based GFP/mCherry ratio (high-content imaging, Operetta)": "Fluorescence imaging",
     "FluoReSyn nanobody biosensor (GFP immunostaining)":              "Fluorescence imaging",
 
-
     "eGFP/mCherry":                                                   "Fluorescent reporter",
     "EGFP/mCherry reporter assay":                                    "Fluorescent reporter",
     "BRD4BD2-eGFP/mCherry reporter assay":                            "Fluorescent reporter",
     "HEK293T cyclin K\u2013eGFP reporter assay":                       "Fluorescent reporter",
 
-
     "Firefly luciferase activity assay":                              "Luciferase reporter",
     "CCNK-luc reporter (luciferase) degradation assay":               "Luciferase reporter",
-
 
     "ProLabel":                                                       "Enzyme fragment complementation",
     "In Cell Western":                                                "In-cell immunoassay",
@@ -2138,7 +2032,6 @@ ASSAY_STD_MAP = {
 
 
 def standardize_assay(df: pd.DataFrame) -> pd.DataFrame:
-
     if "Assay" not in df.columns:
         print("Column 'Assay' not present, skipping assay standardization")
         return df
@@ -2170,11 +2063,6 @@ def standardize_assay(df: pd.DataFrame) -> pd.DataFrame:
     df = _place_after(df, "Assay", ["Assay_STD"])
     return df
 
-
-
-
-
-
 _UNMAPPED_SOURCES = {
 
     "cell_line":              ("Cell_Line", "CL_SEARCH_MAP"),
@@ -2187,7 +2075,6 @@ _EXAMPLE_COLUMNS = ["DOI", "Compound_Name", "Degradation_Target", "Recruiter", "
 
 
 def write_unmapped_report(df: pd.DataFrame, path: str, input_csv: str) -> None:
-
     import difflib
     import json
 
@@ -2221,10 +2108,6 @@ def write_unmapped_report(df: pd.DataFrame, path: str, input_csv: str) -> None:
         {"input_csv": str(input_csv), "items": items}, indent=2, ensure_ascii=False,
     ) + "\n", encoding="utf-8")
     print(f"Unmapped values: {len(items)} written to {out_path}")
-
-
-
-
 
 
 def main():
@@ -2295,7 +2178,6 @@ def main():
     print(f"Standardization complete: {len(df_llm)} rows, {len(df_llm.columns)} columns")
     print(f"Saved to: {out_path}")
     print(f"{'='*80}")
-
 
 if __name__ == "__main__":
     main()

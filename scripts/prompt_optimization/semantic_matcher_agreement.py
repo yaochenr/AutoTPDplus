@@ -1,41 +1,5 @@
 #!/usr/bin/env python
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import os
 import sys
 import json
@@ -58,7 +22,6 @@ OUT_DIR = "output/results/semantic_matcher_agreement"
 
 
 def load_entries(path):
-
     with open(path) as fh:
         data = json.load(fh)
     rows = []
@@ -81,7 +44,6 @@ def load_entries(path):
 
 
 def matcher_prompt(pred, labeled, feature):
-
     if not feature:
         feature = "compound, protein or cell line"
     return f"""
@@ -91,7 +53,6 @@ def matcher_prompt(pred, labeled, feature):
 
 
 def call_matcher(pred, labeled, feature, retries=3):
-
     prompt = matcher_prompt(pred, labeled, feature)
     for _ in range(retries):
         try:
@@ -138,7 +99,6 @@ def main():
             keys = keys[:args.limit]
         print(f"  {len(entries)} entries -> {len(keys)} unique pairs to replay")
 
-
         for i, key in enumerate(keys, 1):
             pred, labeled, feature = key
             auto1 = call_matcher(pred, labeled, feature)
@@ -153,7 +113,6 @@ def main():
                 "n_entries": len(finals),
             })
 
-
     disagree = [r for r in per_pair_rows if r["auto1"] is not None and r["auto1"] != r["final"]]
     agree = [r for r in per_pair_rows if r["auto1"] is not None and r["auto1"] == r["final"]]
     sample_agree = random.sample(agree, min(args.sample_agree, len(agree)))
@@ -165,7 +124,6 @@ def main():
         for _ in range(args.consistency_passes):
             extra.append(call_matcher(r["pred"], r["labeled"], r["feature"]))
         r["auto_extra"] = extra
-
 
     def stable(r):
         calls = [r["auto1"]] + r["auto_extra"]
@@ -232,7 +190,6 @@ def main():
 
     print("\n" + summary)
     print(f"Written to {OUT_DIR}/ (summary.md, per_pair.csv, disagreements.csv, raw.json)")
-
 
 if __name__ == "__main__":
     main()

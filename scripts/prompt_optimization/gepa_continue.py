@@ -1,21 +1,5 @@
 #!/usr/bin/env python3
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 import argparse
 import json
 import sys
@@ -59,7 +43,6 @@ def main():
     print(f"Review file  : {args.pause_dir / PAUSE_REVIEW}")
     print(f"Papers to re-evaluate: {[p['doi'] for p in papers]}\n")
 
-
     capo = Capo(config_path=str(config_path),
                 initial_prompt_path=str(seed_prompt), resume=False)
     capo.config.setdefault("evaluation", {})
@@ -92,11 +75,9 @@ def main():
         print("Edit the cache more and re-run, or run without --verify to continue.")
         return
 
-
     (args.pause_dir / CONTINUE_SIGNAL).write_text("continue\n", encoding="utf-8")
     print("\n▶ CONTINUE signal sent. The paused GEPA run will resume and re-evaluate "
           "with the corrected cache.")
-
 
 if __name__ == "__main__":
     main()
