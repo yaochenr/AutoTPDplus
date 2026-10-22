@@ -1,0 +1,41 @@
+# Monthly AutoTPD+ update (scripts/run_monthly_workflow.py).
+# Relative paths resolve against the checkout the workflow runs in; absolute paths
+# point at data that lives outside git (paper store, registry, raw LLM results).
+
+git:
+  base_branch: under_review
+  remote: origin
+  branch_prefix: codex/monthly-data-update-   # + YYYY-MM
+
+pmc:
+  repo: /Users/yaochenr/project/pmc_data_mining
+  # Persistent CitationRegistry: the cross-month ledger of every article already seen.
+  registry: /Users/yaochenr/project/tpd_curator/data_source/261016_tpd_incremental/unified_article_list.json
+  papers_root: /Users/yaochenr/project/tpd_curator/data_source/monthly   # <month>/papers/{MGs,PROTACs}
+  include_reviews: false        # reviews go through the manual-review policies, as in the 2024+ batch
+  download_images: false        # figure images are not sent to the LLM
+  max_results_per_query: null   # test cap only
+
+extraction:
+  base_config: tpd_curator/config/llm_extraction_config.yaml
+  prompts:
+    MG: prompts/champion_prompt_glues.md
+    PROTAC: prompts/champion_prompt_protacs.md
+  pipeline_flags: [--cleaning, --llm, --with_history, --use_api, --csv]
+  sync_supplements: true        # scripts/sync_pmc_supplements.py --extract-zips on this month's papers
+
+post_processing:
+  cache_json: /Users/yaochenr/project/tpd_curator/output/monthly/post_processing_cache.json
+
+mapping_agent:
+  enabled: true
+  model: null                   # default: MAPPING_LLM_MODEL_NAME, then LLM_MODEL_NAME from .env
+
+paths:
+  work_root: /Users/yaochenr/project/tpd_curator/output/monthly   # logs, runtime configs, raw results
+  updates_root: data/updates                                       # committed per-month outputs
+  state: data/updates/state.json                                   # next_id per modality, last run
+  retired_ids: data/release/retired_ids.csv
+  release:
+    MG: data/release/AutoTPDplus-MG.csv
+    PROTAC: data/release/AutoTPDplus-PROTAC.csv

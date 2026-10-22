@@ -13,9 +13,6 @@ import io
 import csv
 import pubchempy as pcp
 
-from marker.config.parser import ConfigParser
-
-from .preprocessing.convert_pdf_to_md import convert_pdf_to_md
 from .preprocessing.data_cleaning import clean_json_data
 from .llm.run_llm_api import *
 
@@ -74,9 +71,7 @@ def _read_text_head(file_path: Union[str, Path], n=5, encodings=('utf-8-sig','ut
     for enc in encodings:
         try:
             with open(file_path, 'r', encoding=enc, errors='strict') as f:
-                lines = ''.join([next(f) for _ in range(n)])
-            return lines, enc
-        except StopIteration:
+                lines = ''.join(f.readline() for _ in range(n))
             return lines, enc
         except Exception:
             continue
@@ -111,7 +106,7 @@ def _try_multiheader_read_csv(file_path, encoding, delimiter):
     )
     if isinstance(df.columns, pd.MultiIndex):
         flatten_bad = sum(1 for lvl in df.columns.levels for v in lvl if isinstance(v, str) and v.startswith('Unnamed'))
-        if flatten_bad > 0.3 * len(df.columns):
+        if df.empty or flatten_bad > 0.3 * len(df.columns):
             df = pd.read_csv(
                 file_path,
                 sep=delimiter,
@@ -155,7 +150,14 @@ def _coerce_numeric(df: pd.DataFrame) -> pd.DataFrame:
         elif s2.str.count(',').sum() > s2.str.count(r'\.').sum():
             s2 = s2.str.replace('.', '', regex=False)
             s2 = s2.str.replace(',', '.', regex=False)
-        out[c] = pd.to_numeric(s2, errors='ignore')
+        try:
+            # pandas deprecated errors="ignore" in 2.2.  Calling without an
+            # errors argument and retaining the cleaned strings on failure
+            # preserves the old all-or-nothing behaviour without emitting a
+            # FutureWarning (and without turning non-numeric cells into NaN).
+            out[c] = pd.to_numeric(s2)
+        except (ValueError, TypeError):
+            out[c] = s2
     return out
 
 
@@ -176,9 +178,9 @@ def read_csv_excel_file(file_path: Union[str, Path]) -> str:
     file_ext = file_path.suffix.lower()
 
     try:
-        if file_ext == '.csv':
+        if file_ext in ['.csv', '.tsv']:
             head_text, enc = _read_text_head(file_path)
-            delim = _sniff_delimiter(head_text)
+            delim = '\t' if file_ext == '.tsv' else _sniff_delimiter(head_text)
             df = _try_multiheader_read_csv(file_path, enc, delim)
 
             df.columns = _flatten_columns(df.columns)
@@ -365,8 +367,52 @@ def _filter_excel_sheets_by_keywords(file_path: Union[str, Path]) -> str:
         return ""
 
 
+def _supplementary_file_provenance(file_path: Path, supplementary_folder: Path) -> Dict[str, str]:
+    """Resolve archive/document provenance recorded by PMC SI post-processing."""
+    relative_path = file_path.relative_to(supplementary_folder).as_posix()
+    provenance = {
+        "relative_path": relative_path,
+        "source_archive": "",
+        "archive_member": "",
+        "file_sha256": "",
+        "derived_from": "",
+    }
+
+    current = file_path.parent
+    while current != supplementary_folder.parent:
+        manifest_path = current / "extraction_manifest.json"
+        if manifest_path.is_file():
+            try:
+                manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+                provenance["source_archive"] = str(manifest.get("source_archive") or "")
+                for item in manifest.get("files", []):
+                    if item.get("relative_path") == relative_path:
+                        provenance["archive_member"] = str(item.get("archive_member") or "")
+                        provenance["file_sha256"] = str(item.get("sha256") or "")
+                        break
+            except (json.JSONDecodeError, OSError):
+                pass
+            break
+        if current == supplementary_folder:
+            break
+        current = current.parent
+
+    normalization_manifest = supplementary_folder / "normalized" / "document_normalization_manifest.json"
+    if relative_path.startswith("normalized/") and normalization_manifest.is_file():
+        try:
+            normalized = json.loads(normalization_manifest.read_text(encoding="utf-8"))
+            for item in normalized.get("documents", []):
+                if item.get("derived_path") == relative_path:
+                    provenance["derived_from"] = str(item.get("source_path") or "")
+                    provenance["file_sha256"] = str(item.get("derived_sha256") or provenance["file_sha256"])
+                    break
+        except (json.JSONDecodeError, OSError):
+            pass
+    return provenance
+
+
 def load_supplementary_files_for_pmc(pmc_id: str, json_path: str, filter_by_keywords: bool = True) -> List[Dict[str, str]]:
-    """Load all supplementary files for a given PMC ID and return list of..."""
+    """Recursively load processable original, extracted, and normalized SI files."""
     supplementary_folder = Path(json_path) / pmc_id / "supplementary"
 
     if not supplementary_folder.exists():
@@ -377,8 +423,13 @@ def load_supplementary_files_for_pmc(pmc_id: str, json_path: str, filter_by_keyw
     files_filtered_out = 0
 
     try:
-        for file_path in supplementary_folder.iterdir():
-            if file_path.name == "supplementary_metadata.json":
+        ignored_metadata = {
+            "supplementary_metadata.json",
+            "extraction_manifest.json",
+            "document_normalization_manifest.json",
+        }
+        for file_path in sorted(supplementary_folder.rglob("*")):
+            if file_path.name in ignored_metadata:
                 continue
 
             if not file_path.is_file():
@@ -386,17 +437,20 @@ def load_supplementary_files_for_pmc(pmc_id: str, json_path: str, filter_by_keyw
 
             file_ext = file_path.suffix.lower()
             content = ""
+            provenance = _supplementary_file_provenance(file_path, supplementary_folder)
+            display_name = provenance["relative_path"]
 
-            if file_ext == '.md':
+            if file_ext in ['.md', '.txt']:
                 content = read_markdown_file(file_path)
 
                 if content:
                     supplementary_files.append({
-                        'filename': file_path.name,
-                        'content': f"\n--- Markdown: {file_path.name} ---\n{content}\n",
-                        'file_type': 'markdown'
+                        'filename': display_name,
+                        'content': f"\n--- Text: {display_name} ---\n{content}\n",
+                        'file_type': 'markdown',
+                        **provenance,
                     })
-                    print(f"  ✓ Including {file_path.name} (markdown - for IUPAC name extraction)")
+                    print(f"  ✓ Including {display_name} (text - for SI extraction)")
 
             elif file_ext in ['.xlsx', '.xls']:
                 if filter_by_keywords:
@@ -404,9 +458,10 @@ def load_supplementary_files_for_pmc(pmc_id: str, json_path: str, filter_by_keyw
                     content = _filter_excel_sheets_by_keywords(file_path)
                     if content:
                         supplementary_files.append({
-                            'filename': file_path.name,
+                            'filename': display_name,
                             'content': content,
-                            'file_type': 'excel'
+                            'file_type': 'excel',
+                            **provenance,
                         })
                     else:
                         files_filtered_out += 1
@@ -414,31 +469,34 @@ def load_supplementary_files_for_pmc(pmc_id: str, json_path: str, filter_by_keyw
                     content = read_csv_excel_file(file_path)
                     if content:
                         supplementary_files.append({
-                            'filename': file_path.name,
+                            'filename': display_name,
                             'content': content,
-                            'file_type': 'excel'
+                            'file_type': 'excel',
+                            **provenance,
                         })
 
-            elif file_ext == '.csv':
+            elif file_ext in ['.csv', '.tsv']:
                 content = read_csv_excel_file(file_path)
 
                 if content:
                     if filter_by_keywords:
                         if _contains_relevant_keywords(content):
                             supplementary_files.append({
-                                'filename': file_path.name,
+                                'filename': display_name,
                                 'content': content,
-                                'file_type': 'csv'
+                                'file_type': 'csv',
+                                **provenance,
                             })
-                            print(f"  ✓ Including {file_path.name} (contains DC50/Dmax)")
+                            print(f"  ✓ Including {display_name} (contains DC50/Dmax)")
                         else:
                             files_filtered_out += 1
                             print(f"  ✗ Filtering out {file_path.name} (no relevant keywords found)")
                     else:
                         supplementary_files.append({
-                            'filename': file_path.name,
+                            'filename': display_name,
                             'content': content,
-                            'file_type': 'csv'
+                            'file_type': 'csv',
+                            **provenance,
                         })
 
             elif file_ext == '.docx':
@@ -446,11 +504,12 @@ def load_supplementary_files_for_pmc(pmc_id: str, json_path: str, filter_by_keyw
 
                 if content:
                     supplementary_files.append({
-                        'filename': file_path.name,
+                        'filename': display_name,
                         'content': content,
-                        'file_type': 'docx'
+                        'file_type': 'docx',
+                        **provenance,
                     })
-                    print(f"  ✓ Including {file_path.name} (docx - for IUPAC name extraction)")
+                    print(f"  ✓ Including {display_name} (docx - for SI extraction)")
             else:
                 continue
 
@@ -883,7 +942,8 @@ If no additional data is found in this file, return an empty array: []"""
                                         print(f"Warning: LLM returned text instead of structured JSON for {filename}")
                                         print(f"This may indicate the file contains no relevant data or LLM failed to parse.")
 
-                                        text_out = file_paper_dir / f"{file_number}_supplementary_{idx}_{filename}_text_response.txt"
+                                        response_label = re.sub(r"[^A-Za-z0-9._-]+", "_", filename).strip("_")
+                                        text_out = file_paper_dir / f"{file_number}_supplementary_{idx}_{response_label}_text_response.txt"
                                         with text_out.open("w", encoding="utf-8") as f:
                                             f.write(records_supp)
                                         print(f"Saved text response to: {text_out}")
@@ -891,6 +951,11 @@ If no additional data is found in this file, return an empty array: []"""
                                         all_supplementary_results.append({
                                             'filename': filename,
                                             'file_index': idx,
+                                            'relative_path': supp_file.get('relative_path', filename),
+                                            'source_archive': supp_file.get('source_archive', ''),
+                                            'archive_member': supp_file.get('archive_member', ''),
+                                            'file_sha256': supp_file.get('file_sha256', ''),
+                                            'derived_from': supp_file.get('derived_from', ''),
                                             'extraction': records_supp
                                         })
 
@@ -1145,10 +1210,18 @@ def save_csv(config_file: dict, results_dir: str = None):
                                         if isinstance(record, dict):
                                             record['DOI'] = doi
                                             record['source'] = f"supplementary_{supp_file.get('filename', 'unknown')}"
+                                            record['source_relative_path'] = supp_file.get('relative_path', supp_file.get('filename', 'unknown'))
+                                            record['source_archive'] = supp_file.get('source_archive', '')
+                                            record['source_archive_member'] = supp_file.get('archive_member', '')
+                                            record['source_file_sha256'] = supp_file.get('file_sha256', '')
                                     data_list.extend(extraction)
                                 elif isinstance(extraction, dict):
                                     extraction['DOI'] = doi
                                     extraction['source'] = f"supplementary_{supp_file.get('filename', 'unknown')}"
+                                    extraction['source_relative_path'] = supp_file.get('relative_path', supp_file.get('filename', 'unknown'))
+                                    extraction['source_archive'] = supp_file.get('source_archive', '')
+                                    extraction['source_archive_member'] = supp_file.get('archive_member', '')
+                                    extraction['source_file_sha256'] = supp_file.get('file_sha256', '')
                                     data_list.append(extraction)
 
                     print(f"Merged supplementary data from: {json_file.name}")
@@ -1765,6 +1838,104 @@ def normalize_dashes(text: str) -> str:
     return text
 
 
+def normalize_compound_name_aliases(name: Any) -> Set[str]:
+    """Return conservative aliases for compound names used in evaluation matching."""
+    if is_missing_value(name):
+        return set()
+
+    raw_name = normalize_dashes(str(name)).strip().lower()
+    aliases = {re.sub(r'\s+', ' ', raw_name)}
+
+    prefix_stripped = re.sub(
+        r'^(?:compound|comp|cpd|no\.?)\s+',
+        '',
+        raw_name
+    ).strip()
+    if prefix_stripped:
+        aliases.add(re.sub(r'\s+', ' ', prefix_stripped))
+
+    for paren_value in re.findall(r'\(([^()]+)\)', raw_name):
+        paren_alias = re.sub(r'\s+', ' ', paren_value.strip())
+        if paren_alias:
+            aliases.add(paren_alias)
+
+    trailing_paren_match = re.match(r'^(.+?)\s*\([^()]+\)$', raw_name)
+    if trailing_paren_match:
+        leading_alias = re.sub(r'\s+', ' ', trailing_paren_match.group(1).strip())
+        if leading_alias:
+            aliases.add(leading_alias)
+
+    # Handles paper-local labels such as "6 (SJ6986)" or "12a CCT373566"
+    # while leaving names like "13-7", "PT-179", and "MGD-4" untouched.
+    local_id_match = re.match(
+        r'^(?:compound|comp|cpd|no\.?)?\s*\d+[a-z]?\s+(.+)$',
+        raw_name
+    )
+    if local_id_match:
+        suffix_alias = re.sub(r'\s+', ' ', local_id_match.group(1).strip())
+        suffix_alias = re.sub(r'^\(([^()]+)\)$', r'\1', suffix_alias)
+        if suffix_alias:
+            aliases.add(suffix_alias)
+
+    return {alias for alias in aliases if alias}
+
+
+def _normalize_identity_text(value: Any, *, lower: bool = True, remove_spaces: bool = False) -> str:
+    """Normalize chemical identity fields for deterministic matching."""
+    if is_missing_value(value):
+        return ""
+
+    normalized = normalize_dashes(str(value)).strip()
+    normalized = re.sub(r'\s+', '' if remove_spaces else ' ', normalized)
+    return normalized.lower() if lower else normalized
+
+
+def _looks_like_short_compound_alias(value: Any) -> bool:
+    """Return True for short aliases accidentally stored outside Compound_Name."""
+    if is_missing_value(value):
+        return False
+
+    text = str(value).strip()
+    if len(text) > 50:
+        return False
+    if re.search(r'[\s(),;]', text):
+        return False
+    return bool(re.search(r'[A-Za-z]', text) and re.search(r'\d', text))
+
+
+def compound_identity_keys(row: Any) -> Set[Tuple[str, str]]:
+    """Build deterministic keys for compound identity matching across rows."""
+    keys: Set[Tuple[str, str]] = set()
+
+    if hasattr(row, 'get'):
+        get_value = row.get
+    else:
+        return keys
+
+    for field in ('Compound_Name',):
+        for alias in normalize_compound_name_aliases(get_value(field)):
+            keys.add(('name', alias))
+
+    iupac_value = get_value('IUPAC_Name')
+    iupac_norm = _normalize_identity_text(iupac_value)
+    if iupac_norm:
+        keys.add(('iupac', iupac_norm))
+        if _looks_like_short_compound_alias(iupac_value):
+            for alias in normalize_compound_name_aliases(iupac_value):
+                keys.add(('name', alias))
+
+    smiles_norm = _normalize_identity_text(get_value('SMILES'), lower=False, remove_spaces=True)
+    if smiles_norm:
+        keys.add(('smiles', smiles_norm))
+
+    for field in ('Standard_InChIKey', 'Connectivity_Key'):
+        key_norm = _normalize_identity_text(get_value(field), remove_spaces=True)
+        if key_norm:
+            keys.add(('key', key_norm))
+
+    return keys
+
+
 
 def extract_value_with_operator(text: str) -> tuple:
     """Extract comparison operator and numerical value from a string"""
@@ -2165,11 +2336,12 @@ def _classify_fp_type(pred_compound: str, attempted_matches: List[Dict],
                       gt_compounds_in_paper: Set[str]) -> str:
     """Classify FP into three types:"""
     if not attempted_matches:
-        pred_lower = pred_compound.lower().strip()
+        pred_aliases = normalize_compound_name_aliases(pred_compound)
         for gt_comp in gt_compounds_in_paper:
-            gt_lower = gt_comp.lower().strip()
-            if (pred_lower in gt_lower or gt_lower in pred_lower or
-                pred_lower.replace(' ', '') == gt_lower.replace(' ', '')):
+            gt_aliases = normalize_compound_name_aliases(gt_comp)
+            if (pred_aliases & gt_aliases or
+                any(pred in gt or gt in pred for pred in pred_aliases for gt in gt_aliases) or
+                any(pred.replace(' ', '') == gt.replace(' ', '') for pred in pred_aliases for gt in gt_aliases)):
                 return 'compound_name_error'
 
         return 'compound_not_in_labeled_data'
@@ -2201,14 +2373,19 @@ def _generate_fp_summary(fp_type: str, pred_row: pd.Series,
 
         best_match_score = 0
         best_match_comp = None
+        pred_aliases = normalize_compound_name_aliases(pred_compound)
 
         for gt_comp in gt_compounds_in_paper:
             gt_lower = gt_comp.lower().strip()
             gt_cleaned = clean_compound_name(gt_lower)
+            gt_aliases = normalize_compound_name_aliases(gt_comp)
 
             current_score = 0
 
-            if pred_lower == gt_lower:
+            if pred_aliases & gt_aliases:
+                current_score = 3
+
+            elif pred_lower == gt_lower:
                 current_score = 3
 
             elif pred_cleaned == gt_cleaned:
@@ -2443,12 +2620,24 @@ def evaluate_record_based_accuracy(pred_csv_path: str, labeled_csv_path: str,
                 matched_by_conn_key = False
 
                 if has_compound_name:
-                    pred_compound_norm = normalize_dashes(str(pred_compound).lower())
+                    pred_compound_aliases = normalize_compound_name_aliases(pred_compound)
                     matching_labeled = doi_labeled_df[
-                        doi_labeled_df['Compound_Name'].apply(lambda x: normalize_dashes(str(x).lower())) == pred_compound_norm
+                        doi_labeled_df['Compound_Name'].apply(
+                            lambda x: bool(normalize_compound_name_aliases(x) & pred_compound_aliases)
+                        )
                     ]
                 else:
                     matching_labeled = doi_labeled_df.iloc[0:0]
+
+                if matching_labeled.empty:
+                    pred_identity_keys = compound_identity_keys(pred_row)
+                    if pred_identity_keys:
+                        matching_labeled = doi_labeled_df[
+                            doi_labeled_df.apply(
+                                lambda label_row: bool(compound_identity_keys(label_row) & pred_identity_keys),
+                                axis=1
+                            )
+                        ]
 
                 if matching_labeled.empty and has_conn_key and 'Connectivity_Key' in doi_labeled_df.columns:
                     pred_conn_key = normalize_dashes(str(pred_conn_key_raw).strip().lower())
@@ -2881,15 +3070,25 @@ def evaluate_record_based_accuracy(pred_csv_path: str, labeled_csv_path: str,
 
             if doi_pred_df.empty:
                 predicted_compounds = set()
+                predicted_identity_keys = set()
             else:
-                predicted_compounds = set(doi_pred_df['Compound_Name'].apply(lambda x: normalize_dashes(str(x).lower())))
+                predicted_compounds = set()
+                for pred_name in doi_pred_df['Compound_Name']:
+                    predicted_compounds.update(normalize_compound_name_aliases(pred_name))
+                predicted_identity_keys = set()
+                for _, pred_row in doi_pred_df.iterrows():
+                    predicted_identity_keys.update(compound_identity_keys(pred_row))
 
             for label_idx, label_row in doi_labeled_df.iterrows():
                 if label_idx in successfully_matched_label_indices:
                     continue
 
                 label_compound = label_row['Compound_Name']
-                compound_in_pred = normalize_dashes(str(label_compound).lower()) in predicted_compounds
+                label_identity_keys = compound_identity_keys(label_row)
+                compound_in_pred = (
+                    bool(normalize_compound_name_aliases(label_compound) & predicted_compounds) or
+                    bool(label_identity_keys & predicted_identity_keys)
+                )
 
                 if not compound_in_pred:
                     doi_fn += 1
@@ -3337,7 +3536,9 @@ def _match_compounds(row_a, row_b) -> str:
     )
 
     if not a_name_missing and not b_name_missing:
-        if normalize_dashes(str(a_name).strip().lower()) == normalize_dashes(str(b_name).strip().lower()):
+        if normalize_compound_name_aliases(a_name) & normalize_compound_name_aliases(b_name):
+            return COMPOUND_MATCH_EXACT
+        if compound_identity_keys(row_a) & compound_identity_keys(row_b):
             return COMPOUND_MATCH_EXACT
         if both_ck_present and ck_equal:
             return COMPOUND_MATCH_EXACT
@@ -4089,5 +4290,3 @@ def fetch_smiles_multi_source(csv_file_path: str,
     print(f"{'-'*60}")
     
     return output_path
-
-

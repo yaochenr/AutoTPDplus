@@ -72,6 +72,12 @@
       "labeled_value": "HiBiT",
       "feature": "Assay",
       "result": "yes"
+    },
+    {
+      "pred_value": "CK1α-HiBit",
+      "labeled_value": "HiBiT",
+      "feature": "Assay",
+      "result": "yes"
     }
   ],
   "10.1126/science.adk4422": [
@@ -860,6 +866,330 @@
       "labeled_value": "eGFP-SD56",
       "feature": "Degradation_Target",
       "result": "yes"
+    },
+    {
+      "pred_value": "Flow cytometry",
+      "labeled_value": "Flow cytometry(eGFP/mCherry)",
+      "feature": "Assay",
+      "result": "yes"
+    },
+    {
+      "pred_value": "PRKRA-SD40",
+      "labeled_value": "eGFP-SD36",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "PRKRA-SD40",
+      "labeled_value": "eGFP-SD40",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "PRKRA-SD40",
+      "labeled_value": "eGFP-SD40(F18Q)",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "PRKRA-SD40",
+      "labeled_value": "eGFP-SD56",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "PLK1-SD40",
+      "labeled_value": "eGFP-SD36",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "PLK1-SD40",
+      "labeled_value": "eGFP-SD40",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "PLK1-SD40",
+      "labeled_value": "eGFP-SD40(F18Q)",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "PLK1-SD40",
+      "labeled_value": "eGFP-SD56",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "BRD4-SD40",
+      "labeled_value": "eGFP-SD36",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "BRD4-SD40",
+      "labeled_value": "eGFP-SD40",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "Immunoblot",
+      "labeled_value": "Flow cytometry(eGFP/mCherry)",
+      "feature": "Assay",
+      "result": "no"
+    },
+    {
+      "pred_value": "BRD4-SD40",
+      "labeled_value": "eGFP-SD40(F18Q)",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "BRD4-SD40",
+      "labeled_value": "eGFP-SD56",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "3T3",
+      "labeled_value": "HEK293T",
+      "feature": "Cell_Line",
+      "result": "no"
+    },
+    {
+      "pred_value": "3T3",
+      "labeled_value": "NIH 3T3(mouse 3T3 cells)",
+      "feature": "Cell_Line",
+      "result": "yes"
+    },
+    {
+      "pred_value": "eGFP",
+      "labeled_value": "eGFP-SD36",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "eGFP",
+      "labeled_value": "eGFP-SD40",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "eGFP",
+      "labeled_value": "eGFP-SD40(F18Q)",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "eGFP",
+      "labeled_value": "eGFP-SD56",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "PRKRA",
+      "labeled_value": "eGFP-SD36",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "PRKRA",
+      "labeled_value": "eGFP-SD40",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "PRKRA",
+      "labeled_value": "eGFP-SD40(F18Q)",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "PRKRA",
+      "labeled_value": "eGFP-SD56",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "PLK1",
+      "labeled_value": "eGFP-SD36",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "PLK1",
+      "labeled_value": "eGFP-SD40",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "PLK1",
+      "labeled_value": "eGFP-SD40(F18Q)",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "PLK1",
+      "labeled_value": "eGFP-SD56",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "BRD4",
+      "labeled_value": "eGFP-SD36",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "BRD4",
+      "labeled_value": "eGFP-SD40",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "BRD4",
+      "labeled_value": "eGFP-SD40(F18Q)",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "BRD4",
+      "labeled_value": "eGFP-SD56",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "eGFP (SD36)",
+      "labeled_value": "eGFP-SD36",
+      "feature": "Degradation_Target",
+      "result": "yes"
+    },
+    {
+      "pred_value": "eGFP (SD36)",
+      "labeled_value": "eGFP-SD40",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "eGFP (SD36)",
+      "labeled_value": "eGFP-SD40(F18Q)",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "eGFP (SD36)",
+      "labeled_value": "eGFP-SD56",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "eGFP (SD40)",
+      "labeled_value": "eGFP-SD36",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "eGFP (SD40)",
+      "labeled_value": "eGFP-SD40",
+      "feature": "Degradation_Target",
+      "result": "yes"
+    },
+    {
+      "pred_value": "eGFP (SD40)",
+      "labeled_value": "eGFP-SD40(F18Q)",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "eGFP (SD40)",
+      "labeled_value": "eGFP-SD56",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "eGFP (SD40 F18Q)",
+      "labeled_value": "eGFP-SD40(F18Q)",
+      "feature": "Degradation_Target",
+      "result": "yes"
+    },
+    {
+      "pred_value": "eGFP (SD40 F18Q)",
+      "labeled_value": "eGFP-SD36",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "eGFP (SD40 F18Q)",
+      "labeled_value": "eGFP-SD40",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "eGFP (SD40 F18Q)",
+      "labeled_value": "eGFP-SD56",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "mouse CRBN",
+      "labeled_value": "CRBN",
+      "feature": "Recruiter",
+      "result": "yes"
+    },
+    {
+      "pred_value": "eGFP (SD56)",
+      "labeled_value": "eGFP-SD36",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "eGFP (SD56)",
+      "labeled_value": "eGFP-SD40",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "eGFP (SD56)",
+      "labeled_value": "eGFP-SD40(F18Q)",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "eGFP (SD56)",
+      "labeled_value": "eGFP-SD56",
+      "feature": "Degradation_Target",
+      "result": "yes"
+    },
+    {
+      "pred_value": "mmCRBN",
+      "labeled_value": "CRBN",
+      "feature": "Recruiter",
+      "result": "yes"
+    },
+    {
+      "pred_value": "eGFP (fused to SD40 F18Q revertant)",
+      "labeled_value": "eGFP-SD40(F18Q)",
+      "feature": "Degradation_Target",
+      "result": "yes"
+    },
+    {
+      "pred_value": "eGFP (fused to SD40 F18Q revertant)",
+      "labeled_value": "eGFP-SD36",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "eGFP (fused to SD40 F18Q revertant)",
+      "labeled_value": "eGFP-SD40",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "eGFP (fused to SD40 F18Q revertant)",
+      "labeled_value": "eGFP-SD56",
+      "feature": "Degradation_Target",
+      "result": "no"
     }
   ],
   "10.1021/acs.jmedchem.1c02175": [
@@ -1230,6 +1560,42 @@
       "labeled_value": "Flow cytometry(FACS)",
       "feature": "Assay",
       "result": "no"
+    },
+    {
+      "pred_value": "FACS analysis",
+      "labeled_value": "HiBiT",
+      "feature": "Assay",
+      "result": "no"
+    },
+    {
+      "pred_value": "FACS analysis",
+      "labeled_value": "Flow cytometry(FACS)",
+      "feature": "Assay",
+      "result": "yes"
+    },
+    {
+      "pred_value": "IKZF2 HiBiT degradation assay",
+      "labeled_value": "HiBiT",
+      "feature": "Assay",
+      "result": "yes"
+    },
+    {
+      "pred_value": "FACS assay",
+      "labeled_value": "HiBiT",
+      "feature": "Assay",
+      "result": "no"
+    },
+    {
+      "pred_value": "Western Blot (densitometry analysis)",
+      "labeled_value": "HiBiT",
+      "feature": "Assay",
+      "result": "no"
+    },
+    {
+      "pred_value": "Western Blot (densitometry analysis)",
+      "labeled_value": "Flow cytometry(FACS)",
+      "feature": "Assay",
+      "result": "no"
     }
   ],
   "10.1021/jacs.3c08307": [
@@ -1376,6 +1742,84 @@
       "labeled_value": "HiBiT(with MLN4924)",
       "feature": "Assay",
       "result": "yes"
+    },
+    {
+      "pred_value": "HiBiT assay with MLN4924",
+      "labeled_value": "HiBiT",
+      "feature": "Assay",
+      "result": "no"
+    },
+    {
+      "pred_value": "HiBiT assay with MLN4924",
+      "labeled_value": "HiBiT(with MLN4924)",
+      "feature": "Assay",
+      "result": "yes"
+    },
+    {
+      "pred_value": "HiBiT",
+      "labeled_value": "HiBiT(with MLN4924)",
+      "feature": "Assay",
+      "result": "no"
+    },
+    {
+      "pred_value": "HiBiT assay with 2 μM MLN4924",
+      "labeled_value": "HiBiT",
+      "feature": "Assay",
+      "result": "no"
+    },
+    {
+      "pred_value": "HiBiT assay with 2 μM MLN4924",
+      "labeled_value": "HiBiT(with MLN4924)",
+      "feature": "Assay",
+      "result": "yes"
+    },
+    {
+      "pred_value": "BRD9-HiBiT",
+      "labeled_value": "BRD9",
+      "feature": "Degradation_Target",
+      "result": "yes"
+    },
+    {
+      "pred_value": "VCB",
+      "labeled_value": "VCB complex",
+      "feature": "Recruiter",
+      "result": "yes"
+    },
+    {
+      "pred_value": "HiBiT assays",
+      "labeled_value": "HiBiT",
+      "feature": "Assay",
+      "result": "yes"
+    },
+    {
+      "pred_value": "HiBiT assays",
+      "labeled_value": "HiBiT(with MLN4924)",
+      "feature": "Assay",
+      "result": "no"
+    },
+    {
+      "pred_value": "FACS analysis",
+      "labeled_value": "HiBiT(with MLN4924)",
+      "feature": "Assay",
+      "result": "no"
+    },
+    {
+      "pred_value": "Western blot",
+      "labeled_value": "HiBiT(with MLN4924)",
+      "feature": "Assay",
+      "result": "no"
+    },
+    {
+      "pred_value": "HiBiT assay (+ MLN4924)",
+      "labeled_value": "HiBiT",
+      "feature": "Assay",
+      "result": "no"
+    },
+    {
+      "pred_value": "HiBiT assay (+ MLN4924)",
+      "labeled_value": "HiBiT(with MLN4924)",
+      "feature": "Assay",
+      "result": "yes"
     }
   ],
   "10.1021/acs.jmedchem.0c01313": [
@@ -1414,6 +1858,60 @@
       "labeled_value": "Immunoblot",
       "feature": "Assay",
       "result": "yes"
+    },
+    {
+      "pred_value": "HiBit",
+      "labeled_value": "Immunoblot",
+      "feature": "Assay",
+      "result": "no"
+    },
+    {
+      "pred_value": "Cereblon (CRBN)",
+      "labeled_value": "CRBN",
+      "feature": "Recruiter",
+      "result": "yes"
+    },
+    {
+      "pred_value": "hGSPT1-HiBit",
+      "labeled_value": "Immunoblot",
+      "feature": "Assay",
+      "result": "no"
+    },
+    {
+      "pred_value": "HiBiT assay",
+      "labeled_value": "Immunoblot",
+      "feature": "Assay",
+      "result": "no"
+    },
+    {
+      "pred_value": "MHH-CALL-4",
+      "labeled_value": "MV4-11",
+      "feature": "Cell_Line",
+      "result": "no"
+    },
+    {
+      "pred_value": "Proteomics",
+      "labeled_value": "Immunoblot",
+      "feature": "Assay",
+      "result": "no"
+    },
+    {
+      "pred_value": "GSPT2",
+      "labeled_value": "GSPT1",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "hGSPT1-HiBit assay",
+      "labeled_value": "Immunoblot",
+      "feature": "Assay",
+      "result": "no"
+    },
+    {
+      "pred_value": "MB004",
+      "labeled_value": "MV4-11",
+      "feature": "Cell_Line",
+      "result": "no"
     }
   ],
   "10.1016/j.ejmech.2024.116904": [
@@ -1464,6 +1962,66 @@
       "labeled_value": "BRD4BD2",
       "feature": "Degradation_Target",
       "result": "yes"
+    },
+    {
+      "pred_value": "BRD4BD2-eGFP/mCherry fluorescent reporter assay",
+      "labeled_value": "Flow cytometry(eGFP/mCherry)",
+      "feature": "Assay",
+      "result": "yes"
+    },
+    {
+      "pred_value": "BRD4-HiBiT luminescence assay",
+      "labeled_value": "Flow cytometry(eGFP/mCherry)",
+      "feature": "Assay",
+      "result": "no"
+    },
+    {
+      "pred_value": "HiBiT-BRD4 assay",
+      "labeled_value": "Flow cytometry(eGFP/mCherry)",
+      "feature": "Assay",
+      "result": "no"
+    },
+    {
+      "pred_value": "BRD4BD1/2-eGFP/mCherry reporter assay",
+      "labeled_value": "Flow cytometry(eGFP/mCherry)",
+      "feature": "Assay",
+      "result": "yes"
+    },
+    {
+      "pred_value": "HiBiT",
+      "labeled_value": "Flow cytometry(eGFP/mCherry)",
+      "feature": "Assay",
+      "result": "no"
+    },
+    {
+      "pred_value": "Western blotting",
+      "labeled_value": "Flow cytometry(eGFP/mCherry)",
+      "feature": "Assay",
+      "result": "no"
+    },
+    {
+      "pred_value": "HiBiT system",
+      "labeled_value": "Flow cytometry(eGFP/mCherry)",
+      "feature": "Assay",
+      "result": "no"
+    },
+    {
+      "pred_value": "BRD4BD1",
+      "labeled_value": "BRD4BD2",
+      "feature": "Degradation_Target",
+      "result": "no"
+    },
+    {
+      "pred_value": "fluorescent stability reporter assay",
+      "labeled_value": "Flow cytometry(eGFP/mCherry)",
+      "feature": "Assay",
+      "result": "yes"
+    },
+    {
+      "pred_value": "HiBiT assay",
+      "labeled_value": "Flow cytometry(eGFP/mCherry)",
+      "feature": "Assay",
+      "result": "no"
     }
   ]
 }

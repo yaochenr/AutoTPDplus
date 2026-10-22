@@ -6,12 +6,14 @@ data:
   sections_to_remove: ["Supplementary information", "Unknown Section", "Online content", "Source data"]
   figure_fields_to_remove: ["id", "image_url"]
   pdf_path: /Users/yaochenr/project/tpd_curator/data_source/250825_molglue_papers
-  paper_filter_file: /Users/yaochenr/project/tpd_curator/data_source/250825_molglue_papers/paper_dois/avaliable_paper_ids.json
+  # paper_filter_file: /Users/yaochenr/project/tpd_curator/data_source/250825_molglue_papers/paper_dois/avaliable_paper_ids.json
+  # paper_filter_file: /Users/yaochenr/project/tpd_curator/data_source/250825_molglue_papers/paper_dois/glue_re_extract.json
+  paper_filter_file: /Users/yaochenr/project/tpd_curator/data_source/250825_molglue_papers/paper_dois/glue_gt_set.json
 
 results:
   results_dir: /Users/yaochenr/project/tpd_curator/output/results
 
 evaluation:
-  # cache_file_path: /Users/yaochenr/project/tpd_curator/semantic_cache/llm_gt_match_glue.json # llm vs. gt
-  cache_file_path: /Users/yaochenr/project/tpd_curator/semantic_cache/baseline_gt_match_glue.json # baseline vs. gt
+  cache_file_path: /Users/yaochenr/project/tpd_curator/semantic_cache/llm_gt_match_glue.json # llm vs. gt
+  # cache_file_path: /Users/yaochenr/project/tpd_curator/semantic_cache/baseline_gt_match_glue.json # baseline vs. gt
   # cache_file_path: /Users/yaochenr/project/tpd_curator/semantic_cache/llm_baseline_match_glue.json # llm vs. baseline
