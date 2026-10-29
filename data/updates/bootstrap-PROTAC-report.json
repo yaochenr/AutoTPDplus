@@ -1,0 +1,48 @@
+{
+  "mode": "bootstrap",
+  "modality": "PROTAC",
+  "sources": {
+    "autotpd": {
+      "rows": 714,
+      "dois": 93
+    },
+    "large_scale": {
+      "rows_in": 4867,
+      "rows_kept": 4195,
+      "dois_kept": 554,
+      "rows_superseded_by_autotpd": 582,
+      "rows_rejected_activity_quality": 90,
+      "dropped_columns": [
+        "source",
+        "DC50_parse_status",
+        "Dmax_parse_status",
+        "Dmax_conc_parse_status"
+      ]
+    },
+    "baseline": {
+      "rows_in": 2219,
+      "rows_kept": 1810,
+      "rows_superseded": 401,
+      "rows_rejected_activity_quality": 8,
+      "smiles_source_filled": 1810
+    }
+  },
+  "release_rows": 6719,
+  "id_range": [
+    "AUTOTPD-PROTAC-000001",
+    "AUTOTPD-PROTAC-006719"
+  ],
+  "next_id": 6720,
+  "conflict_rows": {
+    "activity_dc50_unparsed": 32,
+    "activity_dmax_conc_recognised_non_numeric": 29,
+    "activity_dmax_above_100": 13,
+    "activity_dc50_recognised_non_numeric": 9,
+    "activity_missing_dc50_and_dmax": 8,
+    "activity_dc50_units_without_value": 4,
+    "activity_dc50_unsupported_units": 1,
+    "activity_dc50_missing_units": 1,
+    "activity_dmax_conc_unparsed": 1
+  },
+  "validation_errors": []
+}

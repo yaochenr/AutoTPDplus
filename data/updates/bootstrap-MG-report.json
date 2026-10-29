@@ -1,0 +1,39 @@
+{
+  "mode": "bootstrap",
+  "modality": "MG",
+  "sources": {
+    "autotpd": {
+      "rows": 246,
+      "dois": 23
+    },
+    "large_scale": {
+      "rows_in": 472,
+      "rows_kept": 241,
+      "dois_kept": 44,
+      "rows_superseded_by_autotpd": 226,
+      "rows_rejected_activity_quality": 5,
+      "dropped_columns": [
+        "source"
+      ]
+    },
+    "baseline": {
+      "rows_in": 486,
+      "rows_kept": 364,
+      "rows_superseded": 114,
+      "rows_rejected_activity_quality": 8,
+      "smiles_source_filled": 364
+    }
+  },
+  "release_rows": 851,
+  "id_range": [
+    "AUTOTPD-MG-000001",
+    "AUTOTPD-MG-000851"
+  ],
+  "next_id": 852,
+  "conflict_rows": {
+    "activity_missing_dc50_and_dmax": 6,
+    "activity_dc50_units_without_value": 5,
+    "activity_dmax_above_100": 2
+  },
+  "validation_errors": []
+}
