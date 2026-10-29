@@ -1,11 +1,3 @@
-"""Publish the latest release to the AutoTPD+ site and rebuild its summary statistics.
-
-Copies the release CSVs from data/release into docs/data (the files the site serves
-for download), then writes docs/assets/stats.json for the Overview panel and the
-Download dialog. Re-run after each monthly update:
-
-    pixi run python scripts/build_site_stats.py
-"""
 import json
 import shutil
 from datetime import date
@@ -21,7 +13,6 @@ OUT = ROOT / "docs" / "assets" / "stats.json"
 MODALITIES = ("PROTAC", "MG")
 FILES = [f"{name}-{m}.csv" for name in ("AutoTPDplus", "AutoTPD") for m in MODALITIES]
 TOP_N = 8
-# Field-coverage chart: LLM-extracted rows vs rows inherited from the source database.
 COVERAGE_FIELDS = {
     "Assay": "Assay",
     "Cell line": "Cell_Line",
@@ -46,10 +37,8 @@ def summarize(modality):
     plus = pd.read_csv(DATA / f"AutoTPDplus-{modality}.csv", low_memory=False)
     auto = pd.read_csv(DATA / f"AutoTPD-{modality}.csv", low_memory=False)
 
-    # Source-database records carry their original Record_ID; LLM-extracted ones do not.
     extracted = plus[plus["Record_ID"].isna()]
     database = plus[plus["Record_ID"].notna()]
-    # Mouse orthologues (Crbn, Vhl) count as the same recruiter.
     recruiters = plus["Recruiter_Gene"].str.upper()
 
     return {
