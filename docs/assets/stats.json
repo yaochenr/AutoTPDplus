@@ -1,28 +1,28 @@
 {
  "PROTAC": {
-  "records": 6719,
+  "records": 6766,
   "publications": 907,
-  "structures": 2026,
-  "targets": 358,
-  "recruiters": 48,
-  "cell_lines": 485,
-  "smiles_pct": 66.9,
+  "structures": 2032,
+  "targets": 359,
+  "recruiters": 49,
+  "cell_lines": 484,
+  "smiles_pct": 66.7,
   "autotpd": {
    "records": 714,
    "publications": 93
   },
-  "extracted_records": 4909,
+  "extracted_records": 4951,
   "extracted_publications": 647,
-  "database_records": 1810,
+  "database_records": 1815,
   "database_publications": 260,
   "top_targets": [
    {
     "name": "BRD4",
-    "count": 710
+    "count": 719
    },
    {
     "name": "AR",
-    "count": 379
+    "count": 384
    },
    {
     "name": "BTK",
@@ -34,29 +34,29 @@
    },
    {
     "name": "ESR1",
-    "count": 204
+    "count": 216
    },
    {
     "name": "EGFR",
-    "count": 196
+    "count": 197
    },
    {
     "name": "KRAS",
-    "count": 179
+    "count": 181
    },
    {
     "name": "SMARCA4",
-    "count": 166
+    "count": 168
    }
   ],
   "top_recruiters": [
    {
     "name": "CRBN",
-    "count": 3326
+    "count": 3337
    },
    {
     "name": "VHL",
-    "count": 2156
+    "count": 2173
    },
    {
     "name": "BIRC2",
@@ -64,43 +64,43 @@
    },
    {
     "name": "MDM2",
-    "count": 129
+    "count": 130
    },
    {
     "name": "FBXO22",
-    "count": 64
+    "count": 66
    }
   ],
   "top_assays": [
    {
     "name": "Western blot",
-    "count": 1573
+    "count": 1582
    },
    {
     "name": "HiBiT",
-    "count": 574
+    "count": 575
    },
    {
     "name": "Cell-based degradation assay",
-    "count": 327
+    "count": 328
    },
    {
     "name": "Capillary immunoassay",
-    "count": 261
+    "count": 262
    },
    {
     "name": "MSD",
-    "count": 169
+    "count": 172
    },
    {
     "name": "Fluorescence imaging",
-    "count": 143
+    "count": 152
    }
   ],
   "coverage": [
    {
     "field": "Assay",
-    "extracted": 68.5,
+    "extracted": 68.6,
     "database": 4.6
    },
    {
@@ -110,44 +110,44 @@
    },
    {
     "field": "DC50",
-    "extracted": 84.7,
-    "database": 96.6
+    "extracted": 83.9,
+    "database": 96.5
    },
    {
     "field": "DC50 time",
-    "extracted": 33.9,
-    "database": 86.1
+    "extracted": 33.7,
+    "database": 85.7
    },
    {
     "field": "Dmax",
-    "extracted": 52.3,
-    "database": 49.9
+    "extracted": 52.6,
+    "database": 49.8
    },
    {
     "field": "Dmax time",
-    "extracted": 28.8,
-    "database": 42.4
+    "extracted": 29.0,
+    "database": 42.3
    },
    {
     "field": "Dmax conc.",
-    "extracted": 14.7,
+    "extracted": 14.5,
     "database": 0.0
    }
   ]
  },
  "MG": {
-  "records": 851,
+  "records": 856,
   "publications": 107,
   "structures": 400,
-  "targets": 63,
+  "targets": 64,
   "recruiters": 18,
-  "cell_lines": 67,
-  "smiles_pct": 78.4,
+  "cell_lines": 66,
+  "smiles_pct": 78.5,
   "autotpd": {
    "records": 246,
    "publications": 23
   },
-  "extracted_records": 487,
+  "extracted_records": 492,
   "extracted_publications": 67,
   "database_records": 364,
   "database_publications": 40,
@@ -181,14 +181,14 @@
     "count": 35
    },
    {
-    "name": "IKZF3",
+    "name": "ZBTB11",
     "count": 30
    }
   ],
   "top_recruiters": [
    {
     "name": "CRBN",
-    "count": 623
+    "count": 628
    },
    {
     "name": "DDB1",
@@ -210,7 +210,7 @@
   "top_assays": [
    {
     "name": "HiBiT",
-    "count": 273
+    "count": 278
    },
    {
     "name": "Western blot",
@@ -246,40 +246,40 @@
    },
    {
     "field": "DC50",
-    "extracted": 82.8,
+    "extracted": 81.9,
     "database": 95.1
    },
    {
     "field": "DC50 time",
-    "extracted": 62.2,
+    "extracted": 62.6,
     "database": 1.9
    },
    {
     "field": "Dmax",
-    "extracted": 62.6,
+    "extracted": 63.0,
     "database": 61.8
    },
    {
     "field": "Dmax time",
-    "extracted": 48.0,
+    "extracted": 48.6,
     "database": 15.7
    },
    {
     "field": "Dmax conc.",
-    "extracted": 17.2,
+    "extracted": 17.1,
     "database": 1.9
    }
   ]
  },
  "total": {
-  "records": 7570,
+  "records": 7622,
   "publications": 1008,
-  "structures": 2402
+  "structures": 2408
  },
- "updated": "2026-10-27",
+ "updated": "2026-10-29",
  "file_bytes": {
-  "AutoTPDplus-PROTAC.csv": 10481607,
-  "AutoTPDplus-MG.csv": 1191726,
+  "AutoTPDplus-PROTAC.csv": 10687550,
+  "AutoTPDplus-MG.csv": 1206857,
   "AutoTPD-PROTAC.csv": 1280486,
   "AutoTPD-MG.csv": 383925
  }
