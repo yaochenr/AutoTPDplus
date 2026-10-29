@@ -8,6 +8,10 @@
 # Output directories
 output/
 data_source/
+/tmp/
+/lightning_logs/
+/results/
+tests/
 
 # Python cache
 __pycache__/

@@ -182,6 +182,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/pydantic-settings-2.14.0-pyhcf101f3_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pygments-2.20.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyparsing-3.3.2-pyhcf101f3_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pypdf-6.16.2-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/pyside6-6.11.0-py310hb9dbd67_2.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pysocks-1.7.1-pyha55dd90_7.conda
       - conda: https://conda.anaconda.org/conda-forge/linux-64/python-3.10.20-h3c07f61_0_cpython.conda
@@ -279,6 +280,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/18/79/1b8fa1bb3568781e84c9200f951c735f3f157429f44be0495da55894d620/filetype-1.2.0-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d5/0c/043d5e551459da400957a1395e0febbf771446ff34291afcbe3d8be2a279/fsspec-2026.4.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ab/6e/81d47999aebc1b155f81eca4477a616a70f238a2549848c38983f3c22a82/ftfy-6.3.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/dc/b7/8c72dedbb950d88a6f64588fcbc590d2a21e2b9f19b36aa6c5016c54ec75/gepa-0.1.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/37/cf/4880c2137c14280b2f59975cdf12cc442bc0ae1f9ea473a26eaa0c146786/google_auth-2.50.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/2d/b6/552d40e96da22921eb1fead7c14b00b5b5473a20e45959488660fab35ee2/google_genai-1.75.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/49/4d/103f76b04310e5e57656696cc184690d20c466af0bca3ca88f8c8ea5d4f3/hf_xet-1.5.0-cp37-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl
@@ -482,6 +484,7 @@ environments:
       - conda: https://conda.anaconda.org/conda-forge/noarch/pydantic-settings-2.14.0-pyhcf101f3_1.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pygments-2.20.0-pyhd8ed1ab_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pyparsing-3.3.2-pyhcf101f3_0.conda
+      - conda: https://conda.anaconda.org/conda-forge/noarch/pypdf-6.16.2-pyhcf101f3_0.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/pysocks-1.7.1-pyha55dd90_7.conda
       - conda: https://conda.anaconda.org/conda-forge/osx-arm64/python-3.10.20-h1b19095_0_cpython.conda
       - conda: https://conda.anaconda.org/conda-forge/noarch/python-dateutil-2.9.0.post0-pyhe01879c_2.conda
@@ -553,6 +556,7 @@ environments:
       - pypi: https://files.pythonhosted.org/packages/18/79/1b8fa1bb3568781e84c9200f951c735f3f157429f44be0495da55894d620/filetype-1.2.0-py2.py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/d5/0c/043d5e551459da400957a1395e0febbf771446ff34291afcbe3d8be2a279/fsspec-2026.4.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/ab/6e/81d47999aebc1b155f81eca4477a616a70f238a2549848c38983f3c22a82/ftfy-6.3.1-py3-none-any.whl
+      - pypi: https://files.pythonhosted.org/packages/dc/b7/8c72dedbb950d88a6f64588fcbc590d2a21e2b9f19b36aa6c5016c54ec75/gepa-0.1.1-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/37/cf/4880c2137c14280b2f59975cdf12cc442bc0ae1f9ea473a26eaa0c146786/google_auth-2.50.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/2d/b6/552d40e96da22921eb1fead7c14b00b5b5473a20e45959488660fab35ee2/google_genai-1.75.0-py3-none-any.whl
       - pypi: https://files.pythonhosted.org/packages/9b/ff/edcc2b40162bef3ff78e14ab637e5f3b89243d6aee72f5949d3bb6a5af83/hf_xet-1.5.0-cp37-abi3-macosx_11_0_arm64.whl
@@ -1686,6 +1690,45 @@ packages:
   requires_dist:
   - wcwidth
   requires_python: '>=3.9'
+- pypi: https://files.pythonhosted.org/packages/dc/b7/8c72dedbb950d88a6f64588fcbc590d2a21e2b9f19b36aa6c5016c54ec75/gepa-0.1.1-py3-none-any.whl
+  name: gepa
+  version: 0.1.1
+  sha256: 71ead7c591eafcc727b83509cdc4182f20264800a6ddf8520d61419daeb47466
+  requires_dist:
+  - litellm>=1.64.0 ; python_full_version < '3.14' and extra == 'full'
+  - datasets>=2.14.6 ; python_full_version < '3.14' and extra == 'full'
+  - mlflow>=3.0.0 ; python_full_version < '3.14' and extra == 'full'
+  - wandb ; python_full_version < '3.14' and extra == 'full'
+  - litellm>=1.81.0 ; python_full_version >= '3.14' and extra == 'full'
+  - datasets>=4.5.0 ; python_full_version >= '3.14' and extra == 'full'
+  - mlflow-skinny>=3.8.1 ; python_full_version >= '3.14' and extra == 'full'
+  - wandb>=0.23.0 ; python_full_version >= '3.14' and extra == 'full'
+  - pyarrow>=22.0.0 ; python_full_version >= '3.14' and extra == 'full'
+  - pydantic>=2.12.0 ; python_full_version >= '3.14' and extra == 'full'
+  - tiktoken>=0.12.0 ; python_full_version >= '3.14' and extra == 'full'
+  - tqdm>=4.66.1 ; extra == 'full'
+  - cloudpickle>=3.0.0 ; extra == 'full'
+  - gepa[full] ; extra == 'test'
+  - pytest ; extra == 'test'
+  - pyright ; extra == 'test'
+  - setuptools>=77.0.1 ; extra == 'build'
+  - wheel ; extra == 'build'
+  - build ; extra == 'build'
+  - twine ; extra == 'build'
+  - semver ; extra == 'build'
+  - packaging ; extra == 'build'
+  - requests ; extra == 'build'
+  - gepa[test] ; extra == 'dev'
+  - gepa[build] ; extra == 'dev'
+  - pre-commit ; extra == 'dev'
+  - build>=1.0.3 ; extra == 'dev'
+  - ruff>=0.3.0 ; extra == 'dev'
+  - gepa[full] ; extra == 'gskill'
+  - swesmith ; extra == 'gskill'
+  - docker ; extra == 'gskill'
+  - python-dotenv ; extra == 'gskill'
+  - pyyaml ; extra == 'gskill'
+  requires_python: '>=3.10,<3.15'
 - pypi: https://files.pythonhosted.org/packages/37/cf/4880c2137c14280b2f59975cdf12cc442bc0ae1f9ea473a26eaa0c146786/google_auth-2.50.0-py3-none-any.whl
   name: google-auth
   version: 2.50.0
@@ -4924,6 +4967,19 @@ packages:
   - pkg:pypi/pyparsing?source=hash-mapping
   size: 110893
   timestamp: 1769003998136
+- conda: https://conda.anaconda.org/conda-forge/noarch/pypdf-6.16.2-pyhcf101f3_0.conda
+  sha256: ec6dc2ded3795906f1f04defbd6db7da7d1db12e982f27e5d542be5a09218925
+  md5: b53895b8c3fe08b1d504ad1c9eaf85c7
+  depends:
+  - python >=3.10
+  - typing_extensions >=4.0
+  - python
+  license: BSD-3-Clause
+  license_family: BSD
+  purls:
+  - pkg:pypi/pypdf?source=hash-mapping
+  size: 317508
+  timestamp: 1787510677690
 - pypi: https://files.pythonhosted.org/packages/21/8b/27d4d5409f3c76b985f4ee4afe147b606594411e15ac4dc1c3363c9a9810/pypdfium2-4.30.0-py3-none-macosx_11_0_arm64.whl
   name: pypdfium2
   version: 4.30.0

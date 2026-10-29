@@ -1,5 +1,5 @@
 <h1 align="center">
-  Agentic Literature Extraction for Targeted Protein Degradation
+  Agentic Literature Extraction Augments Targeted Protein Degradation Databases
 </h1>
 
 <p align="center">
