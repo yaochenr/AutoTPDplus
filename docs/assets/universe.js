@@ -3,7 +3,8 @@
 import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js';
 
 const canvas = document.getElementById('universe');
-const dialog = document.getElementById('download');
+// While any dialog (Download, Overview) is open, scrolling belongs to it, not the scene.
+const dialogOpen = () => document.querySelector('dialog[open]') !== null;
 const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
 const small = window.matchMedia('(max-width: 640px)').matches;
 
@@ -168,7 +169,7 @@ const push = (amount) => {
 };
 
 window.addEventListener('wheel', (e) => {
-  if (dialog && dialog.open) return;
+  if (dialogOpen()) return;
   const unit = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? window.innerHeight : 1;
   push(e.deltaY * unit * 0.16);
 }, { passive: true });
@@ -176,7 +177,7 @@ window.addEventListener('wheel', (e) => {
 let touchY = null;
 window.addEventListener('touchstart', (e) => { touchY = e.touches[0].clientY; }, { passive: true });
 window.addEventListener('touchmove', (e) => {
-  if (touchY === null || (dialog && dialog.open)) return;
+  if (touchY === null || dialogOpen()) return;
   const y = e.touches[0].clientY;
   push((touchY - y) * 0.12);
   touchY = y;
@@ -184,7 +185,7 @@ window.addEventListener('touchmove', (e) => {
 window.addEventListener('touchend', () => { touchY = null; }, { passive: true });
 
 window.addEventListener('keydown', (e) => {
-  if (dialog && dialog.open) return;
+  if (dialogOpen()) return;
   if (e.key === 'ArrowDown' || e.key === 'PageDown') push(14);
   if (e.key === 'ArrowUp' || e.key === 'PageUp') push(-14);
 });

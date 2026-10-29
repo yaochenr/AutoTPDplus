@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AutoTPD+</title>
-<meta name="description" content="AutoTPD+: targeted protein degradation assay records extracted from the literature by an agentic LLM workflow.">
+<meta name="description" content="AutoTPD+: a living database of targeted protein degradation assay records, mined from open-access literature by an agentic LLM workflow and updated monthly.">
 <style>
   :root {
     --bg: #ffffff;
@@ -14,6 +14,9 @@
     --btn-line: #b5b5b5;
     --hover: #f5f5f5;
     --overlay: rgba(255, 255, 255, 0.55);
+    --panel: #fafafa;
+    --series-1: #2a78d6;  /* mined from PMC OA */
+    --series-2: #eb6834;  /* source database */
     color-scheme: light;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -60,7 +63,7 @@
     color: var(--muted);
     text-wrap: balance;
   }
-  nav {
+  main nav {
     margin-top: 40px;
     display: flex;
     flex-wrap: wrap;
@@ -121,8 +124,8 @@
   .close:hover { color: var(--fg); }
   .close:focus { outline: none; }
   .close:focus-visible { color: var(--fg); outline: 1px solid var(--line); outline-offset: 2px; border-radius: 6px; }
-  ul { list-style: none; }
-  li a {
+  #download ul { list-style: none; }
+  #download li a {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -132,7 +135,7 @@
     color: var(--fg);
     text-decoration: none;
   }
-  li a:hover { background: var(--hover); }
+  #download li a:hover { background: var(--hover); }
   .name { font-size: 15px; font-weight: 500; }
   .size { font-size: 13px; color: var(--muted); white-space: nowrap; }
   .group {
@@ -142,14 +145,250 @@
     letter-spacing: 0.06em;
     padding: 12px 14px 4px;
   }
+
+  /* ---- Overview panel ---- */
+  #overview {
+    width: min(1040px, calc(100% - 32px));
+    height: calc(100% - 48px);
+    max-width: none;
+    max-height: none;
+    overflow: hidden;
+    text-align: left;
+  }
+  #overview[open] { display: flex; flex-direction: column; }
+  #overview a { color: inherit; }
+  #overview sub, #overview sup { line-height: 0; }
+  .ov-head {
+    flex: none;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 0 16px 0 24px;
+    height: 56px;
+    border-bottom: 1px solid var(--line);
+  }
+  .ov-head h2 { font-size: 17px; font-weight: 600; flex: none; }
+  .ov-nav { display: flex; gap: 18px; overflow-x: auto; scrollbar-width: none; flex: 1; min-width: 0; }
+  .ov-nav::-webkit-scrollbar { display: none; }
+  .ov-nav a { font-size: 14px; color: var(--muted); text-decoration: none; white-space: nowrap; }
+  .ov-nav a:hover { color: var(--fg); }
+  .ov-scroll { flex: 1; overflow-y: auto; overscroll-behavior: contain; font-size: 16px; line-height: 1.6; }
+  .ov-body { max-width: 920px; margin: 0 auto; padding: 0 24px 64px; }
+  .ov-body section { padding-top: 56px; }
+  .ov-body .eyebrow {
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    margin-bottom: 10px;
+  }
+  .ov-body h3 { font-size: 28px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.2; margin-bottom: 16px; }
+  .ov-body h4 { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+  .ov-body p { max-width: 70ch; }
+  .ov-body code, .ov-body pre { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  .muted { color: var(--muted); }
+  .small { font-size: 13px; }
+
+  .ov-hero { padding-top: 40px; text-align: center; }
+  .ov-hero .title { margin: 0 auto; font-size: 22px; font-weight: 600; letter-spacing: -0.01em; max-width: 32ch; text-wrap: balance; line-height: 1.35; }
+  .ov-hero .authors { margin: 16px auto 0; font-size: 15px; max-width: 60ch; }
+  .ov-hero .affil { margin: 8px auto 0; font-size: 13px; color: var(--muted); max-width: 70ch; }
+  .tldr {
+    margin: 32px auto 0;
+    max-width: 760px;
+    padding: 24px 28px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    background: var(--panel);
+    text-align: left;
+  }
+  .ov-body .tldr p { max-width: none; }
+  .ov-body .tldr .motto { font-size: 22px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.25; margin-bottom: 10px; }
+  .live {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 14px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .live::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #1baf7a;
+    box-shadow: 0 0 0 3px rgba(27, 175, 122, 0.18);
+  }
+
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 24px; }
+  .tile { border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; min-width: 0; }
+  .tile .num { font-size: 30px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+  .tile .lbl { font-size: 13px; color: var(--muted); margin-top: 4px; }
+
+  .switch { display: inline-flex; border: 1px solid var(--btn-line); border-radius: 999px; padding: 3px; margin-top: 32px; }
+  .switch button {
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 14px;
+    padding: 6px 16px;
+    border-radius: 999px;
+    color: var(--muted);
+    cursor: pointer;
+  }
+  .switch button[aria-pressed="true"] { background: var(--fg); color: var(--bg); }
+
+  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 16px; }
+  .chart { border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; min-width: 0; }
+  .chart.wide { grid-column: 1 / -1; }
+  .chart h4 { font-size: 15px; }
+  .chart .sub { font-size: 13px; color: var(--muted); margin-bottom: 14px; }
+  .rows { display: grid; gap: 6px; }
+  .row { display: grid; grid-template-columns: 10.5em 1fr 3.2em; align-items: center; gap: 10px; font-size: 13px; }
+  .row .lab { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .val { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .track { height: 12px; }
+  .bar-fill {
+    display: block;
+    height: 100%;
+    min-width: 2px;
+    background: var(--series-1);
+    border-radius: 0 4px 4px 0;
+    transition: width 0.4s ease;
+  }
+  .row:hover .bar-fill { filter: brightness(1.12); }
+  .src .row { grid-template-columns: 15em 1fr 11em; }
+  .src .track { height: 16px; }
+  .src .bar-fill.db { background: var(--series-2); }
+  #tip {
+    position: fixed;
+    z-index: 20;
+    pointer-events: none;
+    background: var(--fg);
+    color: var(--bg);
+    font-size: 12px;
+    line-height: 1.4;
+    padding: 6px 9px;
+    border-radius: 8px;
+    opacity: 0;
+    transition: opacity 0.1s;
+    max-width: 240px;
+  }
+
+  .record { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; }
+  .card { border: 1px solid var(--line); border-radius: 14px; padding: 20px; min-width: 0; }
+  dl.kv { display: grid; grid-template-columns: 9em 1fr; gap: 6px 12px; font-size: 14px; }
+  dl.kv dt { color: var(--muted); }
+  dl.kv dd { min-width: 0; overflow-wrap: anywhere; }
+  .smiles { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; }
+  .groups { display: grid; gap: 12px; font-size: 14px; align-content: start; }
+  .groups h4 { font-size: 14px; margin-bottom: 0; }
+  .ov-body .groups p { color: var(--muted); font-size: 13px; }
+
+  details.schema { margin-top: 16px; }
+  details.schema summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    padding: 8px 16px;
+    border: 1px solid var(--btn-line);
+    border-radius: 999px;
+    list-style: none;
+  }
+  details.schema summary::-webkit-details-marker { display: none; }
+  details.schema summary::after { content: "+"; color: var(--muted); }
+  details.schema[open] summary::after { content: "−"; }
+  details.schema summary:hover { background: var(--hover); }
+  .table-wrap { overflow-x: auto; margin-top: 12px; border: 1px solid var(--line); border-radius: 14px; }
+  .table-wrap table { border-collapse: collapse; width: 100%; font-size: 13px; }
+  .table-wrap th, .table-wrap td { padding: 7px 12px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+  .table-wrap thead th { font-weight: 600; color: var(--muted); background: var(--panel); white-space: nowrap; }
+  .table-wrap tr.grp th { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); padding-top: 14px; }
+  .table-wrap tr:last-child td { border-bottom: 0; }
+  .table-wrap td:first-child { white-space: nowrap; }
+  .table-wrap td.ex { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12px; overflow-wrap: anywhere; min-width: 12em; }
+
+  .datasets { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 24px; }
+  .datasets ul { list-style: none; margin-top: 14px; }
+  .datasets li a {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    margin: 0 -12px;
+    border-radius: 10px;
+    text-decoration: none;
+    font-size: 14px;
+  }
+  .datasets li a:hover { background: var(--hover); }
+  .tag { display: inline-block; font-size: 12px; font-weight: 400; border: 1px solid var(--line); border-radius: 999px; padding: 1px 9px; color: var(--muted); margin-left: 6px; vertical-align: 2px; }
+
+  .code { position: relative; margin-top: 16px; }
+  .code pre {
+    background: #111;
+    color: #eaeaea;
+    border-radius: 14px;
+    padding: 18px 20px;
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-x: auto;
+  }
+  .code .c { color: #8a8a8a; }
+  .copy {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    border: 1px solid #444;
+    background: #1d1d1d;
+    color: #ddd;
+    font: inherit;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .copy:hover { background: #2a2a2a; }
+
+  .notes { margin-top: 20px; font-size: 13px; color: var(--muted); display: grid; gap: 6px; }
+  .ov-body .notes p { max-width: none; }
+  .ov-foot { border-top: 1px solid var(--line); margin-top: 56px; padding-top: 20px; font-size: 13px; color: var(--muted); display: grid; gap: 6px; }
+
+  @media (max-width: 760px) {
+    #overview { width: 100%; height: 100%; border: 0; border-radius: 0; }
+    .ov-head { padding: 0 8px 0 16px; gap: 16px; }
+    .ov-body { padding: 0 16px 48px; }
+    .tiles { grid-template-columns: 1fr 1fr; }
+    .charts, .record, .datasets { grid-template-columns: 1fr; }
+    .row { grid-template-columns: 7.5em 1fr 3em; }
+    .src .row { grid-template-columns: 1fr; gap: 4px; }
+    .src .val { text-align: left; }
+    .ov-body h3 { font-size: 24px; }
+    .ov-hero .title { font-size: 19px; }
+    .tldr { padding: 20px; }
+  }
+  @media (max-width: 420px) {
+    .tile .num { font-size: 24px; }
+    dl.kv { grid-template-columns: 7.5em 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .bar-fill { transition: none; }
+  }
 </style>
 </head>
 <body>
 <canvas id="universe" aria-hidden="true"></canvas>
 <main>
   <h1>AutoTPD+</h1>
-  <p class="tagline">An expanded targeted protein degradation database of molecular glue and PROTAC assay records, extracted from the literature by an agentic LLM workflow.</p>
+  <p class="tagline">A living targeted protein degradation database of molecular glue and PROTAC assay records, mined from the literature by an agentic LLM workflow.</p>
   <nav>
+    <button class="btn" type="button" id="open-overview">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zM0 8a8 8 0 1116 0A8 8 0 010 8zm8-3.75a.75.75 0 110-1.5.75.75 0 010 1.5zM7.5 6.5h1v6h-1v-6z"/></svg>
+      Overview
+    </button>
     <a class="btn" href="https://github.com/yaochenr/LLM-TPD-Extraction" target="_blank" rel="noopener">
       <svg viewBox="0 0 16 16" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
       GitHub
@@ -172,19 +411,228 @@
     <button class="close" type="button" aria-label="Close" id="close-download">&times;</button>
   </div>
   <ul>
-    <li class="group">AutoTPD+</li>
+    <li class="group">AutoTPD+ · living database</li>
     <li><a href="data/AutoTPDplus-PROTAC.csv" download>
-      <span class="name">AutoTPDplus-PROTAC.csv</span><span class="size">2,532 records · 4.5 MB</span></a></li>
+      <span class="name">AutoTPDplus-PROTAC.csv</span><span class="size" data-file="AutoTPDplus-PROTAC.csv"></span></a></li>
     <li><a href="data/AutoTPDplus-MG.csv" download>
-      <span class="name">AutoTPDplus-MG.csv</span><span class="size">618 records · 911 KB</span></a></li>
-    <li class="group">AutoTPD</li>
+      <span class="name">AutoTPDplus-MG.csv</span><span class="size" data-file="AutoTPDplus-MG.csv"></span></a></li>
+    <li class="group">AutoTPD · benchmark</li>
     <li><a href="data/AutoTPD-PROTAC.csv" download>
-      <span class="name">AutoTPD-PROTAC.csv</span><span class="size">714 records · 1.2 MB</span></a></li>
+      <span class="name">AutoTPD-PROTAC.csv</span><span class="size" data-file="AutoTPD-PROTAC.csv"></span></a></li>
     <li><a href="data/AutoTPD-MG.csv" download>
-      <span class="name">AutoTPD-MG.csv</span><span class="size">246 records · 375 KB</span></a></li>
+      <span class="name">AutoTPD-MG.csv</span><span class="size" data-file="AutoTPD-MG.csv"></span></a></li>
   </ul>
 </div>
 </dialog>
+
+<dialog id="overview" aria-labelledby="ov-title">
+  <div class="ov-head">
+    <h2 id="ov-title">Overview</h2>
+    <div class="ov-nav" role="navigation" aria-label="Overview sections">
+      <a href="#ov-glance">At a glance</a>
+      <a href="#ov-record">Records</a>
+      <a href="#ov-data">Data</a>
+      <a href="#ov-cite">Cite</a>
+    </div>
+    <button class="close" type="button" aria-label="Close" id="close-overview">&times;</button>
+  </div>
+
+  <div class="ov-scroll" id="ov-scroll">
+  <div class="ov-body">
+    <div class="ov-hero">
+      <p class="title">Beyond Manual Curation: Augmenting Targeted Protein Degradation Databases via Agentic Literature Extraction Workflows</p>
+      <p class="authors">Yaochen Rao<sup>1</sup>, Farzaneh Jalalypour<sup>1</sup>, N. M. Anoop Krishnan<sup>2</sup>, Rocío Mercado<sup>1,3*</sup></p>
+      <p class="affil"><sup>1</sup>Chalmers University of Technology and University of Gothenburg &nbsp;·&nbsp; <sup>2</sup>Yardi School of Artificial Intelligence, IIT Delhi &nbsp;·&nbsp; <sup>3</sup>SciLifeLab, Gothenburg &nbsp;·&nbsp; <sup>*</sup>Corresponding author</p>
+      <div class="tldr">
+        <p class="motto">From papers to records, every month.</p>
+        <p><strong>AutoTPD+</strong> is a living database of PROTAC and molecular glue degradation assays. An LLM workflow mines open-access PubMed Central papers for each compound's target, recruiter, assay, cell line and DC<sub>50</sub>/D<sub>max</sub> values. PROTAC-DB and MolGlueDB records cover papers without open full text. A monthly search adds new papers.</p>
+        <p class="live"><span>Updated monthly · last update <span data-updated>—</span></span></p>
+      </div>
+    </div>
+
+    <section id="ov-glance">
+      <p class="eyebrow">At a glance</p>
+      <h3>What is in AutoTPD+</h3>
+      <div class="tiles">
+        <div class="tile"><div class="num" data-total="records">—</div><div class="lbl">assay records</div></div>
+        <div class="tile"><div class="num" data-total="publications">—</div><div class="lbl">source publications</div></div>
+        <div class="tile"><div class="num" data-total="structures">—</div><div class="lbl">unique chemical structures</div></div>
+        <div class="tile"><div class="num">2</div><div class="lbl">modalities: PROTAC and molecular glue</div></div>
+      </div>
+
+      <div class="switch" role="group" aria-label="Modality">
+        <button type="button" data-mod="PROTAC" aria-pressed="true">PROTAC</button>
+        <button type="button" data-mod="MG" aria-pressed="false">Molecular glue</button>
+      </div>
+      <div class="tiles">
+        <div class="tile"><div class="num" data-key="records">—</div><div class="lbl">assay records</div></div>
+        <div class="tile"><div class="num" data-key="targets">—</div><div class="lbl">degradation targets</div></div>
+        <div class="tile"><div class="num" data-key="recruiters">—</div><div class="lbl">recruiters (E3 ligases and others)</div></div>
+        <div class="tile"><div class="num" data-key="cell_lines">—</div><div class="lbl">cell lines</div></div>
+      </div>
+      <div class="charts">
+        <div class="chart wide src">
+          <h4>Where the records come from</h4>
+          <p class="sub">Records and papers by source</p>
+          <div class="rows" id="chart-sources"></div>
+        </div>
+        <div class="chart">
+          <h4>Most frequent targets</h4>
+          <p class="sub">Records per degradation target (gene symbol)</p>
+          <div class="rows" id="chart-targets"></div>
+        </div>
+        <div class="chart">
+          <h4>Recruiters</h4>
+          <p class="sub">Records per recruiter (gene symbol)</p>
+          <div class="rows" id="chart-recruiters"></div>
+          <h4 style="margin-top: 20px">Assay families</h4>
+          <p class="sub">Records per standardized assay technique</p>
+          <div class="rows" id="chart-assays"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="ov-record">
+      <p class="eyebrow">Data format</p>
+      <h3>One row, one degradation assay</h3>
+      <div class="record">
+        <div class="card">
+          <h4>Example record</h4>
+          <p class="small muted" style="margin-bottom: 14px">AUTOTPD-MG-000155 · <a href="https://doi.org/10.1021/acs.jmedchem.0c01313" target="_blank" rel="noopener">10.1021/acs.jmedchem.0c01313</a></p>
+          <dl class="kv">
+            <dt>Compound</dt><dd>CC-90009</dd>
+            <dt>SMILES</dt><dd class="smiles">O=C1CCC(N2Cc3cc(CNC(=O)C(F)(F)c4ccc(Cl)cc4)ccc3C2=O)C(=O)N1</dd>
+            <dt>Target</dt><dd>GSPT1 · UniProt P15170</dd>
+            <dt>Recruiter</dt><dd>CRBN · UniProt Q96SW2</dd>
+            <dt>Assay</dt><dd>immunoblot → Western blot</dd>
+            <dt>Cell line</dt><dd>MV4-11 · CVCL_0064</dd>
+            <dt>DC<sub>50</sub></dt><dd>1.6 nM at 24 h</dd>
+            <dt>D<sub>max</sub></dt><dd>&gt; 90% at 24 h</dd>
+          </dl>
+        </div>
+        <div class="card groups">
+          <div><h4>Compound</h4><p>Reported name, IUPAC name, SMILES, InChIKey</p></div>
+          <div><h4>Target and recruiter</h4><p>Reported name, gene symbol, UniProt accession, sequence</p></div>
+          <div><h4>Assay context</h4><p>Assay and its standardized family; cell line with Cellosaurus accession and species</p></div>
+          <div><h4>Endpoints</h4><p>DC<sub>50</sub> with units and time; D<sub>max</sub> with time and concentration; qualifiers (&lt;, &gt;, ~) and ranges</p></div>
+          <div><h4>Provenance</h4><p>Source DOI and a stable <code>AutoTPD_ID</code></p></div>
+        </div>
+      </div>
+      <details class="schema">
+        <summary>All columns</summary>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Column</th><th>Description</th><th>Example (AUTOTPD-MG-000155)</th></tr></thead>
+            <tbody>
+            <tr class="grp"><th colspan="3">Identifiers</th></tr>
+            <tr><td><code>AutoTPD_ID</code></td><td>Stable row identifier, unchanged across monthly releases</td><td class="ex">AUTOTPD-MG-000155</td></tr>
+            <tr><td><code>Record_ID</code></td><td>Record ID in the source database; empty for LLM-extracted records</td><td class="ex"><span class="muted">—</span></td></tr>
+            <tr><td><code>Compound_ID</code></td><td>Compound ID in the source database; empty for LLM-extracted records</td><td class="ex"><span class="muted">—</span></td></tr>
+            <tr><td><code>DOI</code></td><td>Source publication</td><td class="ex">10.1021/acs.jmedchem.0c01313</td></tr>
+            <tr class="grp"><th colspan="3">Compound</th></tr>
+            <tr><td><code>Compound_Name</code></td><td>Compound name or label as reported in the paper</td><td class="ex">CC-90009</td></tr>
+            <tr><td><code>IUPAC_Name</code></td><td>IUPAC name</td><td class="ex">2-(4-chlorophenyl)-N-[[2…</td></tr>
+            <tr><td><code>IUPAC_Name_Source</code></td><td>Where the IUPAC name came from (PAPER, PUBCHEM)</td><td class="ex">PUBCHEM</td></tr>
+            <tr><td><code>SMILES</code></td><td>RDKit canonical SMILES</td><td class="ex">O=C1CCC(N2Cc3cc(CNC(=O)C(F)(F)c4ccc(Cl)cc4)ccc3C2=O)C(=O)N1</td></tr>
+            <tr><td><code>SMILES_Source</code></td><td>Where the SMILES came from (PAPER, PUBCHEM, OPSIN, source database)</td><td class="ex">PUBCHEM</td></tr>
+            <tr><td><code>StdInChIKey</code></td><td>Standard InChIKey computed by RDKit from the standardized canonical SMILES</td><td class="ex">PWBHUSLMHZLGRN-UHFFFAOYSA-N</td></tr>
+            <tr><td><code>Connectivity_Key</code></td><td>First block of the InChIKey (connectivity only, ignores stereochemistry)</td><td class="ex">PWBHUSLMHZLGRN</td></tr>
+            <tr class="grp"><th colspan="3">Degradation target</th></tr>
+            <tr><td><code>Degradation_Target</code></td><td>Target as reported in the paper</td><td class="ex">GSPT1</td></tr>
+            <tr><td><code>Degradation_Target_Gene</code></td><td>HGNC gene symbol</td><td class="ex">GSPT1</td></tr>
+            <tr><td><code>Degradation_Target_Uniprot</code></td><td>UniProt accession</td><td class="ex">P15170</td></tr>
+            <tr><td><code>Degradation_Target_Uniprot_MutationID</code></td><td>UniProt variant ID when a specific mutant is targeted</td><td class="ex"><span class="muted">—</span></td></tr>
+            <tr><td><code>Degradation_Target_Sequence</code></td><td>UniProt protein sequence</td><td class="ex">MELSEPIVENGETEMSPEESWEHK…</td></tr>
+            <tr class="grp"><th colspan="3">Recruiter</th></tr>
+            <tr><td><code>Recruiter</code></td><td>Recruiter (usually an E3 ligase) as reported</td><td class="ex">CRBN</td></tr>
+            <tr><td><code>Recruiter_Gene</code></td><td>Gene symbol</td><td class="ex">CRBN</td></tr>
+            <tr><td><code>Recruiter_Uniprot</code></td><td>UniProt accession</td><td class="ex">Q96SW2</td></tr>
+            <tr><td><code>Recruiter_Sequence</code></td><td>UniProt protein sequence</td><td class="ex">MAGEGDQQDAAHNMGNHLPLLPAE…</td></tr>
+            <tr class="grp"><th colspan="3">Assay context</th></tr>
+            <tr><td><code>Assay</code></td><td>Assay as described in the paper</td><td class="ex">immunoblot</td></tr>
+            <tr><td><code>Assay_STD</code></td><td>Standardized assay technique family</td><td class="ex">Western blot</td></tr>
+            <tr><td><code>Cell_Line</code></td><td>Cell line as reported, or cell-free</td><td class="ex">MV4-11</td></tr>
+            <tr><td><code>Cell_Line_STD</code></td><td>Cellosaurus recommended name</td><td class="ex">MV4-11</td></tr>
+            <tr><td><code>Cell_Line_STD_Accession</code></td><td>Cellosaurus accession (RRID)</td><td class="ex">CVCL_0064</td></tr>
+            <tr><td><code>Cell_Line_Modification</code></td><td>Engineered construct, e.g. a HiBiT knock-in</td><td class="ex"><span class="muted">—</span></td></tr>
+            <tr><td><code>Cell_Line_Species</code></td><td>Species of the cell line</td><td class="ex">Homo sapiens</td></tr>
+            <tr class="grp"><th colspan="3">DC<sub>50</sub></th></tr>
+            <tr><td><code>DC50</code></td><td>Concentration giving 50% degradation</td><td class="ex">1.6</td></tr>
+            <tr><td><code>DC50_units</code></td><td>Units of DC50</td><td class="ex">nM</td></tr>
+            <tr><td><code>DC50_h</code></td><td>Treatment time in hours</td><td class="ex">24</td></tr>
+            <tr><td><code>DC50_operator</code></td><td>Qualifier: &lt;, &gt;, ~, &lt;=, &gt;=</td><td class="ex"><span class="muted">—</span></td></tr>
+            <tr><td><code>DC50_range_min</code></td><td>Range low end, or mean − error</td><td class="ex"><span class="muted">—</span></td></tr>
+            <tr><td><code>DC50_range_max</code></td><td>Range high end, or mean + error</td><td class="ex"><span class="muted">—</span></td></tr>
+            <tr class="grp"><th colspan="3">D<sub>max</sub></th></tr>
+            <tr><td><code>Dmax</code></td><td>Maximal degradation, in %</td><td class="ex">90</td></tr>
+            <tr><td><code>Dmax_h</code></td><td>Treatment time in hours</td><td class="ex">24</td></tr>
+            <tr><td><code>Dmax_operator</code></td><td>Qualifier: &lt;, &gt;, ~, &lt;=, &gt;=</td><td class="ex">&gt;</td></tr>
+            <tr><td><code>Dmax_range_min</code></td><td>Range low end, or mean − error</td><td class="ex"><span class="muted">—</span></td></tr>
+            <tr><td><code>Dmax_range_max</code></td><td>Range high end, or mean + error</td><td class="ex"><span class="muted">—</span></td></tr>
+            <tr class="grp"><th colspan="3">D<sub>max</sub> concentration</th></tr>
+            <tr><td><code>Dmax_conc</code></td><td>Concentration at which Dmax was measured</td><td class="ex"><span class="muted">—</span></td></tr>
+            <tr><td><code>Dmax_conc_units</code></td><td>Units of Dmax_conc</td><td class="ex"><span class="muted">—</span></td></tr>
+            <tr><td><code>Dmax_conc_operator</code></td><td>Qualifier for Dmax_conc</td><td class="ex"><span class="muted">—</span></td></tr>
+            <tr><td><code>Dmax_conc_range_min</code></td><td>Range low end</td><td class="ex"><span class="muted">—</span></td></tr>
+            <tr><td><code>Dmax_conc_range_max</code></td><td>Range high end</td><td class="ex"><span class="muted">—</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </details>
+    </section>
+
+    <section id="ov-data">
+      <p class="eyebrow">Data</p>
+      <h3>Download</h3>
+      <div class="datasets">
+        <div class="card">
+          <h4>AutoTPD+ <span class="tag">living · monthly</span></h4>
+          <p class="small muted">AutoTPD extended to all open-access MG and PROTAC papers plus PROTAC-DB and MolGlueDB, updated monthly. Use it for analysis and model training.</p>
+          <ul>
+            <li><a href="data/AutoTPDplus-PROTAC.csv" download><span>AutoTPDplus-PROTAC.csv</span><span class="size" data-file="AutoTPDplus-PROTAC.csv"></span></a></li>
+            <li><a href="data/AutoTPDplus-MG.csv" download><span>AutoTPDplus-MG.csv</span><span class="size" data-file="AutoTPDplus-MG.csv"></span></a></li>
+          </ul>
+        </div>
+        <div class="card">
+          <h4>AutoTPD <span class="tag">benchmark · frozen</span></h4>
+          <p class="small muted">Records extracted from the 211 papers used to benchmark extraction accuracy in the paper.</p>
+          <ul>
+            <li><a href="data/AutoTPD-PROTAC.csv" download><span>AutoTPD-PROTAC.csv</span><span class="size" data-file="AutoTPD-PROTAC.csv"></span></a></li>
+            <li><a href="data/AutoTPD-MG.csv" download><span>AutoTPD-MG.csv</span><span class="size" data-file="AutoTPD-MG.csv"></span></a></li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="notes">
+        <p>Extraction covers text and tables, not figures.</p>
+        <p>Data: CC BY 4.0 · Code: MIT. Source publications, PROTAC-DB and MolGlueDB keep their own licenses.</p>
+      </div>
+    </section>
+
+    <section id="ov-cite">
+      <p class="eyebrow">Citation</p>
+      <h3>Cite AutoTPD+</h3>
+      <div class="code">
+        <button class="copy" type="button" data-copy="bibtex">Copy</button>
+<pre id="bibtex"><code>@article{rao2026autotpd,
+  title   = {Beyond Manual Curation: Augmenting Targeted Protein Degradation
+             Databases via Agentic Literature Extraction Workflows},
+  author  = {Rao, Yaochen and Jalalypour, Farzaneh and Krishnan, N. M. Anoop
+             and Mercado, Roc{\'\i}o},
+  journal = {arXiv preprint arXiv:2605.11221},
+  year    = {2026}
+}</code></pre>
+      </div>
+    </section>
+
+    <div class="ov-foot">
+      <span>Supported by the Swedish Research Council (VR) and the Wallenberg AI, Autonomous Systems and Software Program (WASP). Computations enabled by Chalmers e-Commons and NAISS.</span>
+    </div>
+  </div>
+  </div>
+</dialog>
+
+<div id="tip" role="status" aria-live="polite"></div>
 
 <script>
   const dialog = document.getElementById('download');
@@ -192,6 +640,128 @@
   document.getElementById('close-download').addEventListener('click', () => dialog.close());
   dialog.addEventListener('click', (e) => { if (e.target === dialog) dialog.close(); });
 </script>
-<script type="module" src="assets/universe.js?v=3d-3"></script>
+<script>
+  // ---- Overview panel ----
+  const overview = document.getElementById('overview');
+  const ovScroll = document.getElementById('ov-scroll');
+  const fmt = (n) => Number(n).toLocaleString('en-US');
+  const fmtBytes = (b) => b >= 1e6 ? (b / 1048576).toFixed(1) + ' MB' : Math.round(b / 1024) + ' KB';
+  const DB_NAME = { PROTAC: 'PROTAC-DB', MG: 'MolGlueDB' };
+  let stats = null;
+
+  function openOverview() {
+    if (!overview.open) overview.showModal();
+    if (location.hash !== '#overview') history.replaceState(null, '', '#overview');
+  }
+  document.getElementById('open-overview').addEventListener('click', openOverview);
+  document.getElementById('close-overview').addEventListener('click', () => overview.close());
+  overview.addEventListener('click', (e) => { if (e.target === overview) overview.close(); });
+  overview.addEventListener('close', () => {
+    if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+  });
+  // A shared link to #overview opens the panel directly.
+  if (location.hash === '#overview') openOverview();
+
+  // Section links scroll inside the panel instead of changing the page hash.
+  overview.querySelectorAll('.ov-nav a').forEach((a) => {
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      const target = document.querySelector(a.getAttribute('href'));
+      ovScroll.scrollTo({ top: target.offsetTop - 8, behavior: 'smooth' });
+    });
+  });
+
+  // Tooltip shared by every bar row.
+  const tip = document.getElementById('tip');
+  function bindTip(el, text) {
+    el.addEventListener('mousemove', (e) => {
+      tip.textContent = text;
+      tip.style.opacity = 1;
+      tip.style.left = Math.min(e.clientX + 12, window.innerWidth - tip.offsetWidth - 8) + 'px';
+      tip.style.top = (e.clientY + 14) + 'px';
+    });
+    el.addEventListener('mouseleave', () => { tip.style.opacity = 0; });
+  }
+
+  // items: [{name, count, label?, cls?, tip?}]
+  function barRows(id, items, total) {
+    const max = Math.max(...items.map((d) => d.count));
+    document.getElementById(id).replaceChildren(...items.map((d) => {
+      const row = document.createElement('div');
+      row.className = 'row';
+      row.innerHTML = `<span class="lab"></span><span class="track"><span class="bar-fill ${d.cls || ''}" style="width:${(100 * d.count / max).toFixed(1)}%"></span></span><span class="val"></span>`;
+      row.querySelector('.lab').textContent = d.name;
+      row.querySelector('.val').textContent = d.label || fmt(d.count);
+      bindTip(row, d.tip || `${d.name}: ${fmt(d.count)} records (${(100 * d.count / total).toFixed(1)}%)`);
+      return row;
+    }));
+  }
+
+  function render(mod) {
+    const s = stats[mod];
+    overview.querySelectorAll('.switch button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.mod === mod)));
+    overview.querySelectorAll('[data-key]').forEach((el) => { el.textContent = fmt(s[el.dataset.key]); });
+    barRows('chart-sources', [
+      {
+        name: 'Mined from PMC open access',
+        count: s.extracted_records,
+        label: `${fmt(s.extracted_records)} · ${fmt(s.extracted_publications)} papers`,
+        tip: `${fmt(s.extracted_records)} records extracted by the LLM workflow from ${fmt(s.extracted_publications)} open-access papers`,
+      },
+      {
+        name: `From ${DB_NAME[mod]}`,
+        count: s.database_records,
+        cls: 'db',
+        label: `${fmt(s.database_records)} · ${fmt(s.database_publications)} papers`,
+        tip: `${fmt(s.database_records)} standardized ${DB_NAME[mod]} records from ${fmt(s.database_publications)} papers without open full text`,
+      },
+    ], s.records);
+    barRows('chart-targets', s.top_targets, s.records);
+    barRows('chart-recruiters', s.top_recruiters, s.records);
+    barRows('chart-assays', s.top_assays, s.records);
+  }
+
+  // Stats come from scripts/build_site_stats.py and also fill the Download dialog.
+  // Revalidate on every load so a monthly update shows up without a stale cached copy.
+  fetch('assets/stats.json', { cache: 'no-cache' })
+    .then((r) => r.json())
+    .then((data) => {
+      stats = data;
+      const records = {
+        'AutoTPDplus-PROTAC.csv': data.PROTAC.records,
+        'AutoTPDplus-MG.csv': data.MG.records,
+        'AutoTPD-PROTAC.csv': data.PROTAC.autotpd.records,
+        'AutoTPD-MG.csv': data.MG.autotpd.records,
+      };
+      document.querySelectorAll('[data-file]').forEach((el) => {
+        const f = el.dataset.file;
+        const bytes = data.file_bytes && data.file_bytes[f];
+        el.textContent = `${fmt(records[f])} records` + (bytes ? ` · ${fmtBytes(bytes)}` : '');
+      });
+      document.querySelectorAll('[data-total]').forEach((el) => { el.textContent = fmt(data.total[el.dataset.total]); });
+      const updated = new Date(data.updated + 'T00:00:00');
+      document.querySelector('[data-updated]').textContent = updated.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+      render('PROTAC');
+      overview.querySelectorAll('.switch button').forEach((b) => b.addEventListener('click', () => render(b.dataset.mod)));
+    })
+    .catch(() => {
+      overview.querySelector('.switch').hidden = true;
+    });
+
+  overview.querySelectorAll('.copy').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const text = document.getElementById(btn.dataset.copy).innerText;
+      try {
+        await navigator.clipboard.writeText(text);
+        btn.textContent = 'Copied';
+      } catch {
+        btn.textContent = 'Press ⌘C';
+        getSelection().selectAllChildren(document.getElementById(btn.dataset.copy));
+      }
+      setTimeout(() => { btn.textContent = 'Copy'; }, 1600);
+    });
+  });
+</script>
+<script type="module" src="assets/universe.js?v=3d-4"></script>
 </body>
 </html>

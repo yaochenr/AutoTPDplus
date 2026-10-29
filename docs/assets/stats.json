@@ -1,0 +1,286 @@
+{
+ "PROTAC": {
+  "records": 6719,
+  "publications": 907,
+  "structures": 2026,
+  "targets": 358,
+  "recruiters": 48,
+  "cell_lines": 485,
+  "smiles_pct": 66.9,
+  "autotpd": {
+   "records": 714,
+   "publications": 93
+  },
+  "extracted_records": 4909,
+  "extracted_publications": 647,
+  "database_records": 1810,
+  "database_publications": 260,
+  "top_targets": [
+   {
+    "name": "BRD4",
+    "count": 710
+   },
+   {
+    "name": "AR",
+    "count": 379
+   },
+   {
+    "name": "BTK",
+    "count": 268
+   },
+   {
+    "name": "SMARCA2",
+    "count": 250
+   },
+   {
+    "name": "ESR1",
+    "count": 204
+   },
+   {
+    "name": "EGFR",
+    "count": 196
+   },
+   {
+    "name": "KRAS",
+    "count": 179
+   },
+   {
+    "name": "SMARCA4",
+    "count": 166
+   }
+  ],
+  "top_recruiters": [
+   {
+    "name": "CRBN",
+    "count": 3326
+   },
+   {
+    "name": "VHL",
+    "count": 2156
+   },
+   {
+    "name": "BIRC2",
+    "count": 154
+   },
+   {
+    "name": "MDM2",
+    "count": 129
+   },
+   {
+    "name": "FBXO22",
+    "count": 64
+   }
+  ],
+  "top_assays": [
+   {
+    "name": "Western blot",
+    "count": 1573
+   },
+   {
+    "name": "HiBiT",
+    "count": 574
+   },
+   {
+    "name": "Cell-based degradation assay",
+    "count": 327
+   },
+   {
+    "name": "Capillary immunoassay",
+    "count": 261
+   },
+   {
+    "name": "MSD",
+    "count": 169
+   },
+   {
+    "name": "Fluorescence imaging",
+    "count": 143
+   }
+  ],
+  "coverage": [
+   {
+    "field": "Assay",
+    "extracted": 68.5,
+    "database": 4.6
+   },
+   {
+    "field": "Cell line",
+    "extracted": 85.7,
+    "database": 97.1
+   },
+   {
+    "field": "DC50",
+    "extracted": 84.7,
+    "database": 96.6
+   },
+   {
+    "field": "DC50 time",
+    "extracted": 33.9,
+    "database": 86.1
+   },
+   {
+    "field": "Dmax",
+    "extracted": 52.3,
+    "database": 49.9
+   },
+   {
+    "field": "Dmax time",
+    "extracted": 28.8,
+    "database": 42.4
+   },
+   {
+    "field": "Dmax conc.",
+    "extracted": 14.7,
+    "database": 0.0
+   }
+  ]
+ },
+ "MG": {
+  "records": 851,
+  "publications": 107,
+  "structures": 400,
+  "targets": 63,
+  "recruiters": 18,
+  "cell_lines": 67,
+  "smiles_pct": 78.4,
+  "autotpd": {
+   "records": 246,
+   "publications": 23
+  },
+  "extracted_records": 487,
+  "extracted_publications": 67,
+  "database_records": 364,
+  "database_publications": 40,
+  "top_targets": [
+   {
+    "name": "CSNK1A1",
+    "count": 136
+   },
+   {
+    "name": "IKZF1",
+    "count": 130
+   },
+   {
+    "name": "GSPT1",
+    "count": 84
+   },
+   {
+    "name": "CCNK",
+    "count": 58
+   },
+   {
+    "name": "IKZF2",
+    "count": 56
+   },
+   {
+    "name": "BRD4",
+    "count": 37
+   },
+   {
+    "name": "BCL6",
+    "count": 35
+   },
+   {
+    "name": "IKZF3",
+    "count": 30
+   }
+  ],
+  "top_recruiters": [
+   {
+    "name": "CRBN",
+    "count": 623
+   },
+   {
+    "name": "DDB1",
+    "count": 58
+   },
+   {
+    "name": "DCAF16",
+    "count": 30
+   },
+   {
+    "name": "RNF126",
+    "count": 24
+   },
+   {
+    "name": "SIAH1",
+    "count": 23
+   }
+  ],
+  "top_assays": [
+   {
+    "name": "HiBiT",
+    "count": 273
+   },
+   {
+    "name": "Western blot",
+    "count": 159
+   },
+   {
+    "name": "Fluorescent reporter",
+    "count": 58
+   },
+   {
+    "name": "MSD",
+    "count": 57
+   },
+   {
+    "name": "Flow cytometry",
+    "count": 47
+   },
+   {
+    "name": "HTRF",
+    "count": 13
+   }
+  ],
+  "coverage": [
+   {
+    "field": "Assay",
+    "extracted": 98.4,
+    "database": 42.6
+   },
+   {
+    "field": "Cell line",
+    "extracted": 96.3,
+    "database": 48.1
+   },
+   {
+    "field": "DC50",
+    "extracted": 82.8,
+    "database": 95.1
+   },
+   {
+    "field": "DC50 time",
+    "extracted": 62.2,
+    "database": 1.9
+   },
+   {
+    "field": "Dmax",
+    "extracted": 62.6,
+    "database": 61.8
+   },
+   {
+    "field": "Dmax time",
+    "extracted": 48.0,
+    "database": 15.7
+   },
+   {
+    "field": "Dmax conc.",
+    "extracted": 17.2,
+    "database": 1.9
+   }
+  ]
+ },
+ "total": {
+  "records": 7570,
+  "publications": 1008,
+  "structures": 2402
+ },
+ "updated": "2026-10-27",
+ "file_bytes": {
+  "AutoTPDplus-PROTAC.csv": 10481607,
+  "AutoTPDplus-MG.csv": 1191726,
+  "AutoTPD-PROTAC.csv": 1280486,
+  "AutoTPD-MG.csv": 383925
+ }
+}
