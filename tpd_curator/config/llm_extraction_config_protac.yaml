@@ -4,7 +4,6 @@ data:
   json_fields_to_remove: ["pmcid", "body_text", "references", "extraction_date", "xml_metadata", "supplementary_info"]
   sections_to_remove: ["Supplementary information", "Unknown Section", "Online content", "Source data"]
   figure_fields_to_remove: ["id", "image_url"]
-  paper_filter_file: /Users/yaochenr/project/tpd_curator/data_source/261016_tpd_incremental/PROTACs/paper_dois/extract_3_round3_remaining.json
   paper_ids_file: /Users/yaochenr/project/tpd_curator/data_source/261016_tpd_incremental/PROTACs/paper_dois/avaliable_papers.json
   pdf_path: /Users/yaochenr/project/tpd_curator/data_source/261016_tpd_incremental/PROTACs
   include_supplementary: true

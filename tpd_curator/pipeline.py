@@ -150,14 +150,13 @@ def _coerce_numeric(df: pd.DataFrame) -> pd.DataFrame:
         elif s2.str.count(',').sum() > s2.str.count(r'\.').sum():
             s2 = s2.str.replace('.', '', regex=False)
             s2 = s2.str.replace(',', '.', regex=False)
-        try:
-
-
-
-
-            out[c] = pd.to_numeric(s2)
-        except (ValueError, TypeError):
-            out[c] = s2
+        numeric = pd.to_numeric(s2, errors='coerce')
+        if numeric.notna().all():
+            out[c] = numeric
+        else:
+            # Keep the original text wherever the cleanup produced no number: stripping the
+            # spaces out of 'close to 100%' only turns a readable value into 'closeto100'.
+            out[c] = s2.where(numeric.notna(), s)
     return out
 
 
@@ -1304,111 +1303,137 @@ _APPROX_PREFIX_RE = re.compile(
     re.IGNORECASE,
 )
 
+_AS_LOW_AS_PREFIX_RE = re.compile(
+    r'^\s*as\s+low\s+as\s+(?=[\d.])',
+    re.IGNORECASE,
+)
+
+_CONCENTRATION_SUFFIX_RE = re.compile(
+    r'''\s*(?P<unit>
+        (?:nano|micro|milli|pico|femto)?molar
+        |[numµμpf]?m
+        |[numµμpf]?mol\s*(?:[/\.]\s*)?l(?:\s*(?:[-−⁻]\s*)?1)?
+    )\s*$''',
+    re.IGNORECASE | re.VERBOSE,
+)
+
+_NUMBER_PATTERN = r'(?:\d+(?:\.\d*)?|\.\d+)(?:[eE][+-]?\d+)?'
+
+
+def _split_embedded_concentration_unit(value_str: str):
+    """Return the numeric text and a recognized trailing concentration unit."""
+
+    match = _CONCENTRATION_SUFFIX_RE.search(value_str)
+    if not match:
+        return value_str, None
+
+    embedded_unit = normalize_concentration_unit(match.group('unit'))
+    if embedded_unit not in {'nm', 'um', 'mm', 'm', 'pm', 'fm'}:
+        return value_str, None
+    return value_str[:match.start()].strip(), embedded_unit
+
+
+def _format_dc50_number(value: float) -> str:
+    # 12 significant digits avoids floating-point artefacts while retaining
+    # small picomolar conversions such as 4.3 pM -> 0.0043 nM.
+    return f"{value:.12g}"
+
+
+def _convert_dc50_to_nm(value_str: str, unit: str):
+    """Convert a molar concentration to nM, returning None when ambiguous."""
+
+    normalized_unit = normalize_concentration_unit(unit)
+    if normalized_unit not in {'nm', 'um', 'mm', 'm', 'pm', 'fm'}:
+        return None
+
+    text = str(value_str).strip()
+    text = _APPROX_PREFIX_RE.sub('~', text)
+    text = _AS_LOW_AS_PREFIX_RE.sub('', text)
+    text = re.sub(r'[\u2010-\u2015\u2212\uFE58\uFE63\uFF0D]', '-', text)
+    text, embedded_unit = _split_embedded_concentration_unit(text)
+    if embedded_unit is not None:
+        normalized_unit = embedded_unit
+    text = text.replace(',', '').strip()
+
+    factors = {
+        'nm': 1,
+        'um': 1_000,
+        'mm': 1_000_000,
+        'm': 1_000_000_000,
+        'pm': 0.001,
+        'fm': 0.000001,
+    }
+    factor = factors[normalized_unit]
+
+    def converted(number: str) -> float:
+        return float(number) * factor
+
+    def converted_text(number: str) -> str:
+        if factor == 1:
+            return number
+        return _format_dc50_number(converted(number))
+
+    # Comparators on both bounds carry information that a plain range would
+    # lose, e.g. ">0.2 and <1".
+    compound = re.fullmatch(
+        rf'\s*([><]=?|[≥≤])\s*({_NUMBER_PATTERN})\s*(?:and|to)\s*'
+        rf'([><]=?|[≥≤])\s*({_NUMBER_PATTERN})\s*',
+        text,
+        flags=re.IGNORECASE,
+    )
+    if compound:
+        left_op = compound.group(1).replace('≥', '>=').replace('≤', '<=')
+        right_op = compound.group(3).replace('≥', '>=').replace('≤', '<=')
+        return (
+            f"{left_op} {converted_text(compound.group(2))} and "
+            f"{right_op} {converted_text(compound.group(4))}"
+        )
+
+    operator_match = re.match(r'^([><=≥≤≈~∼]+)\s*(.*)$', text)
+    if operator_match:
+        operator = operator_match.group(1)
+        operator = operator.replace('≥', '>=').replace('≤', '<=').replace('∼', '~')
+        number_part = operator_match.group(2).strip()
+        operator = operator + ' '
+    else:
+        operator = ''
+        number_part = text
+
+    uncertainty = re.fullmatch(
+        rf'({_NUMBER_PATTERN})\s*±\s*({_NUMBER_PATTERN})', number_part
+    )
+    if uncertainty:
+        if factor == 1:
+            return f"{operator}{uncertainty.group(1)} ± {uncertainty.group(2)}"
+        main_value = converted(uncertainty.group(1))
+        uncertainty_value = converted(uncertainty.group(2))
+        if main_value >= 1000:
+            return f"{operator}{main_value:.0f} ± {uncertainty_value:.0f}"
+        if main_value >= 100:
+            return f"{operator}{main_value:.1f} ± {uncertainty_value:.1f}"
+        return f"{operator}{main_value:.2f} ± {uncertainty_value:.2f}"
+
+    range_match = re.fullmatch(
+        rf'({_NUMBER_PATTERN})\s*(?:-|to|and)\s*({_NUMBER_PATTERN})',
+        number_part,
+        flags=re.IGNORECASE,
+    )
+    if range_match:
+        low = converted_text(range_match.group(1))
+        high = converted_text(range_match.group(2))
+        return f"{operator}{low}-{high}"
+
+    if re.fullmatch(_NUMBER_PATTERN, number_part):
+        return f"{operator}{converted_text(number_part)}"
+
+    return None
+
 
 def convert_to_nm(value_str: str, unit: str) -> str:
-
     try:
-        unit = normalize_concentration_unit(unit)
-        if unit is None:
-            return value_str
-
-        if isinstance(value_str, str):
-            value_str = _APPROX_PREFIX_RE.sub('~', value_str.strip())
-
-        if unit == 'nm':
-            operator_match = re.match(r'^([><=≥≤≈~∼]+\s*)(.*)', value_str.strip())
-            if operator_match:
-                operator = operator_match.group(1).strip() + ' '
-                number_part = operator_match.group(2).strip()
-            else:
-                operator = ''
-                number_part = value_str.strip()
-
-            number_part = re.sub(r'[a-zA-Zµμ%]+', '', number_part).strip()
-            number_part = number_part.replace(',', '')
-
-            return f"{operator}{number_part}".strip()
-
-        operator_match = re.match(r'^([><=≥≤≈~∼]+\s*)(.*)', value_str.strip())
-        if operator_match:
-            operator = operator_match.group(1).strip() + ' '
-            number_part = operator_match.group(2).strip()
-        else:
-            operator = ''
-            number_part = value_str.strip()
-
-        number_part = re.sub(r'[a-zA-Zµμ%]+', '', number_part).strip()
-
-        number_part = number_part.replace(',', '')
-
-        def apply_conversion(val):
-
-            if unit == 'um':
-                return val * 1000
-            elif unit == 'mm':
-                return val * 1000000
-            elif unit == 'm':
-                return val * 1000000000
-            elif unit == 'pm':
-                return val / 1000
-            elif unit == 'fm':
-                return val / 1000000
-            else:
-                return None
-
-        def format_value(val):
-
-            result = str(val)
-            if '.' in result:
-                result = result.rstrip('0').rstrip('.')
-            return result
-
-        if '±' in number_part:
-            parts = number_part.split('±')
-            if len(parts) == 2:
-                main_value = float(parts[0].strip())
-                uncertainty = float(parts[1].strip())
-
-                converted_main = apply_conversion(main_value)
-                converted_unc = apply_conversion(uncertainty)
-
-                if converted_main is None:
-                    return value_str
-
-                if converted_main >= 1000:
-                    return f"{operator}{converted_main:.0f} ± {converted_unc:.0f}"
-                elif converted_main >= 100:
-                    return f"{operator}{converted_main:.1f} ± {converted_unc:.1f}"
-                else:
-                    return f"{operator}{converted_main:.2f} ± {converted_unc:.2f}"
-
-        elif re.search(r'(?<!^)(?<![\s])-(?!$)', number_part):
-            parts = re.split(r'\s*-\s*', number_part)
-            if len(parts) == 2:
-                try:
-                    low = float(parts[0].strip())
-                    high = float(parts[1].strip())
-
-                    converted_low = apply_conversion(low)
-                    converted_high = apply_conversion(high)
-
-                    if converted_low is None:
-                        return value_str
-
-                    return f"{operator}{format_value(converted_low)}-{format_value(converted_high)}"
-                except ValueError:
-                    return value_str
-
-        else:
-            value = float(number_part)
-            converted_value = apply_conversion(value)
-
-            if converted_value is None:
-                return value_str
-
-            return f"{operator}{format_value(converted_value)}"
-
-    except Exception:
+        converted_value = _convert_dc50_to_nm(value_str, unit)
+        return value_str if converted_value is None else converted_value
+    except (TypeError, ValueError, OverflowError):
         return value_str
 
 _DMAX_OPERATOR_CHARS = '~><≥≤≈∼='
@@ -1485,7 +1510,12 @@ def convert_pdc50_to_nm(value_str: str) -> str:
         return value_str
 
     s = str(value_str).strip()
-    s = re.sub(r'^\s*p?dc\s*50\s*', '', s, flags=re.IGNORECASE).strip()
+    s = re.sub(
+        r'^\s*p?dc\s*50\s*(?:value\s*)?(?:=|:)?\s*',
+        '',
+        s,
+        flags=re.IGNORECASE,
+    ).strip()
     s = re.sub(r'^\s*50\s+', '', s).strip()
 
     def to_nm(pval: float) -> float:
@@ -1552,9 +1582,20 @@ def process_units(csv_file_path: str):
 
             for idx, row in df.iterrows():
                 if pd.notna(row['DC50']) and row['DC50'] != 'null':
-                    dc50_str = str(row['DC50'])
+                    dc50_str = str(row['DC50']).strip()
+                    value_str, embedded_unit = _split_embedded_concentration_unit(dc50_str)
 
-                    match = re.search(r'(.*?)([a-zA-Z\s%µμ]+)$', dc50_str.strip())
+                    if embedded_unit is not None:
+                        converted_value = _convert_dc50_to_nm(value_str, embedded_unit)
+                        if converted_value is not None:
+                            temp_dc50_value.append(converted_value)
+                            temp_dc50_units.append('nM')
+                        else:
+                            temp_dc50_value.append(value_str)
+                            temp_dc50_units.append(embedded_unit)
+                        continue
+
+                    match = re.search(r'(.*?)([a-zA-Z\s%µμ]+)$', dc50_str)
                     if match:
                         value_str = match.group(1).strip()
                         unit = match.group(2).strip()
@@ -1599,32 +1640,35 @@ def process_units(csv_file_path: str):
                                 df.at[idx, 'DC50_units'] = 'nM'
                                 print(f"  Converted: {dc50_value} {unit} → {converted_value} nM (pDC50)")
                             else:
-                                print(f"  Warning: Could not convert pDC50 value {dc50_value}")
+                                print(f"  Skipped ambiguous pDC50 value: {dc50_value}")
                             continue
 
                         has_embedded_unit = bool(re.search(r'[a-zA-Zµμ%]', dc50_value))
+                        normalized_unit = normalize_concentration_unit(unit)
+                        molar_units = {'nm', 'um', 'mm', 'm', 'pm', 'fm'}
 
-                        if has_embedded_unit or unit.lower() not in ['nm', 'nanomolar']:
+                        if has_embedded_unit or normalized_unit != 'nm' or unit != 'nM':
 
-                            if unit.lower() in ['nm', 'nanomolar']:
-                                cleaned_value = clean_dc50_value(dc50_value)
-                                if cleaned_value != dc50_value:
-                                    df.at[idx, 'DC50'] = cleaned_value
-                                    print(f"  Cleaned: {dc50_value} → {cleaned_value} (unit: nM)")
-                            else:
-                                converted_value = convert_to_nm(dc50_value, unit)
-
-                                if converted_value != dc50_value:
+                            if normalized_unit in molar_units:
+                                converted_value = _convert_dc50_to_nm(dc50_value, unit)
+                                if converted_value is not None:
                                     df.at[idx, 'DC50'] = converted_value
                                     df.at[idx, 'DC50_units'] = 'nM'
-                                    print(f"  Converted: {dc50_value} {unit} → {converted_value} nM")
+                                    if converted_value == dc50_value and unit == 'nM':
+                                        continue
+                                    action = 'Standardized' if converted_value == dc50_value else 'Converted'
+                                    print(f"  {action}: {dc50_value} {unit} → {converted_value} nM")
                                 else:
-                                    cleaned_value = clean_dc50_value(dc50_value)
-                                    if cleaned_value != dc50_value:
-                                        df.at[idx, 'DC50'] = cleaned_value
-                                        print(f"  Warning: Could not convert unit {unit}, but cleaned: {dc50_value} → {cleaned_value}")
-                                    else:
-                                        print(f"  Warning: Could not convert {dc50_value} {unit} to nM")
+                                    print(f"  Skipped ambiguous DC50 value: {dc50_value} {unit}")
+                            else:
+                                if re.search(r'[µμu]g\s*/\s*m[lL]', unit, re.IGNORECASE):
+                                    reason = 'molecular weight required'
+                                else:
+                                    reason = 'unsupported concentration unit'
+                                print(
+                                    f"  Skipped non-molar DC50 value: {dc50_value} {unit} "
+                                    f"({reason})"
+                                )
 
             print("DC50 processing complete.")
 
@@ -2235,7 +2279,16 @@ def normalize_concentration_unit(unit) -> str:
     if not s:
         return None
     s = s.replace('µ', 'u').replace('μ', 'u')
+    s = s.replace('⁻', '-').replace('−', '-').replace('¹', '1')
     s = re.sub(r'\s+', '', s)
+    # PDF extraction frequently drops the superscript minus in mol L^-1.
+    molar_per_liter = re.fullmatch(r'([numpf]?mol)(?:/|\.)?l-?1?', s)
+    if molar_per_liter:
+        prefix = molar_per_liter.group(1)
+        return {
+            'nmol': 'nm', 'umol': 'um', 'mmol': 'mm', 'mol': 'm',
+            'pmol': 'pm', 'fmol': 'fm',
+        }.get(prefix, s)
     return _CONCENTRATION_UNIT_ALIASES.get(s, s)
 
 

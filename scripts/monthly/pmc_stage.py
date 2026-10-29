@@ -14,9 +14,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, List
 
-from pmc_miner.core.client import PMCClient
-from pmc_miner.core.storage import StorageManager
-from pmc_miner.mining.activity_screen import (
+REPO = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(REPO))
+
+from tpd_curator.pmc_miner.core.client import PMCClient
+from tpd_curator.pmc_miner.core.storage import StorageManager
+from tpd_curator.pmc_miner.mining.activity_screen import (
     ACCEPTED,
     ERROR,
     MANUAL,
@@ -25,15 +28,14 @@ from pmc_miner.mining.activity_screen import (
     iter_text_chunks,
     screen_catalog,
 )
-from pmc_miner.mining.citation_registry import (
+from tpd_curator.pmc_miner.mining.citation_registry import (
     add_pmc_search_results,
     load_registry_json,
     normalize_doi,
     write_registry,
 )
 
-REPO = Path(__file__).resolve().parents[2]
-PENDING = "pending_activity_screen"
+PENDING ="pending_activity_screen"
 REJECTED_BY_REVIEWER = "rejected_by_reviewer"
 MENTION_POLICY = "dc50_dmax_mention_policy_v1"
 ACCEPT_POLICY = "user_accept_dc50_dmax_mentions_v1"
@@ -249,8 +251,6 @@ def run(args: argparse.Namespace) -> Dict[str, Any]:
 
     write_json(work_dir / "accepted_mg.json", lists["MG"])
     write_json(work_dir / "accepted_protac.json", lists["PROTAC"])
-    write_json(work_dir / "article_types.json",
-               {entry["doi"]: entry["article_type"] for entry in lists["MG"] + lists["PROTAC"] if entry["doi"]})
     write_json(work_dir / "classification.json", classification)
 
     summary = {

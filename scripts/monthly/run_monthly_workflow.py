@@ -146,9 +146,8 @@ def stage_pmc(ctx: Context) -> None:
     work = ctx.work / "pmc"
     rejected = sorted(ctx.path(ctx.config["paths"]["updates_root"]).glob("*/reviewer_rejected_dois.txt"))
     cmd = [
-        "pixi", "run", "--manifest-path", Path(cfg["repo"]) / "pyproject.toml",
-        "python", REPO / "scripts" / "monthly" / "pmc_stage.py",
-        "--registry", cfg["registry"], "--papers_dir", ctx.papers, "--work_dir", work,
+        sys.executable, REPO / "scripts" / "monthly" / "pmc_stage.py",
+        "--registry", ctx.path(cfg["registry"]), "--papers_dir", ctx.papers, "--work_dir", work,
         "--run_label", ctx.month,
     ]
     if rejected:
@@ -159,12 +158,12 @@ def stage_pmc(ctx: Context) -> None:
         cmd.append("--no_images")
     if cfg.get("max_results_per_query"):
         cmd += ["--max_results_per_query", str(cfg["max_results_per_query"])]
-    run_logged(cmd, ctx.log("pmc"), cwd=Path(cfg["repo"]))
+    run_logged(cmd, ctx.log("pmc"), env=python_env())
 
     out = ctx.updates / "pmc"
     out.mkdir(parents=True, exist_ok=True)
     for name in ("pmc_stage_summary.json", "accepted_mg.json", "accepted_protac.json",
-                 "article_types.json", "policy_decisions.csv", "classification.json"):
+                 "policy_decisions.csv", "classification.json"):
         if (work / name).exists():
             shutil.copy2(work / name, out / name)
     template = ctx.updates / "reviewer_rejected_dois.txt"
@@ -337,9 +336,6 @@ def merge_from_snapshot(ctx: Context, snapshot: Path) -> dict[str, Any]:
     state = build.load_state(snapshot / "state.json")
     next_ids = state.get("next_id", {})
     retired_before = build.load_retired(snapshot / "retired_ids.csv")
-    article_types = build.load_article_types(
-        ctx.updates / "pmc" / "article_types.json" if (ctx.updates / "pmc" / "article_types.json").exists() else None
-    )
     rejected = build.read_doi_list(ctx.updates / "reviewer_rejected_dois.txt")
     results = {}
     for modality in MODALITIES:
@@ -351,7 +347,7 @@ def merge_from_snapshot(ctx: Context, snapshot: Path) -> dict[str, Any]:
             build.read_table(snapshot / f"{modality}.csv"), batch,
             modality=modality, next_id=int(next_ids[modality]), run_label=ctx.month,
             retired_ids=set(retired_before[build.ID_COLUMN]),
-            rejected_dois=rejected, article_types=article_types,
+            rejected_dois=rejected,
         )
     return {"state": state, "retired_before": retired_before, "results": results}
 
@@ -411,8 +407,11 @@ def stage_qc(ctx: Context, snapshot: Path, mapping_base: Path | None, reviewer_e
         missing = [c for c in REQUIRED_STD_COLUMNS if c not in std.columns]
         activity = [c for c in ACTIVITY_COLUMNS if c in std.columns]
         if activity:
+            # Values such as "N.D." standardize to empty; the merge drops those rows into
+            # merge_conflicts.csv (activity_missing_dc50_and_dmax), so they only warn here.
             empty = int((std[activity] == "").all(axis=1).sum())
-            _check(checks, f"{modality}: DC50 or Dmax present", "fail" if empty else "pass", f"{empty} rows without either")
+            _check(checks, f"{modality}: DC50 or Dmax present", "warn" if empty else "pass",
+                   f"{empty} rows without either" + (", excluded by the merge" if empty else ""))
         _check(checks, f"{modality}: standardized schema", "fail" if missing else "pass", missing)
 
     changes = read_json(ctx.updates / "mapping_changes.json", {}) or {}
@@ -441,7 +440,7 @@ def stage_qc(ctx: Context, snapshot: Path, mapping_base: Path | None, reviewer_e
                    rep["validation_errors"] or f"{rep['previous_rows']} - {rep['retired_rows']} + {rep['appended_rows']} = {rep['release_rows']}")
             release = build.read_table(ctx.release(modality))
             _check(checks, f"{modality}: AutoTPD_ID unique", "pass" if release[build.ID_COLUMN].is_unique else "fail")
-            previous = build.read_table(snapshot / f"{modality}.csv")
+            previous = build.prepare_release(build.read_table(snapshot / f"{modality}.csv"), modality)
             merged = release.set_index(build.ID_COLUMN)
             carried = previous.set_index(build.ID_COLUMN)
             present = carried.index.isin(merged.index)

@@ -5,7 +5,6 @@ git:
   branch_prefix: codex/monthly-data-update-
 
 pmc:
-  repo: /Users/yaochenr/project/pmc_data_mining
   registry: /Users/yaochenr/project/tpd_curator/data_source/261016_tpd_incremental/unified_article_list.json
   papers_root: /Users/yaochenr/project/tpd_curator/data_source/monthly
   include_reviews: false
@@ -13,7 +12,7 @@ pmc:
   max_results_per_query: null
 
 extraction:
-  base_config: tpd_curator/config/llm_extraction_config.yaml
+  base_config: tpd_curator/config/llm_extraction_config_protac.yaml
   prompts:
     MG: prompts/champion_prompt_glues.md
     PROTAC: prompts/champion_prompt_protacs.md

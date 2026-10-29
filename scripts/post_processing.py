@@ -4,14 +4,16 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 import time
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any, Callable, Iterable, Iterator
 from urllib.parse import quote
 
 import pandas as pd
 import pubchempy as pcp
 import requests
+from tqdm import tqdm
 
 OPSIN_BASE = "https://www.ebi.ac.uk/opsin/ws"
 MISSING_TOKENS = {"", "-", "n/a", "na", "nan", "none", "null", "unknown"}
@@ -145,6 +147,57 @@ def _cached_lookup(
     return result, False
 
 
+def _is_interactive_terminal() -> bool:
+    return bool(getattr(sys.stderr, "isatty", lambda: False)())
+
+
+def _progress_items(
+    items: Iterable[Any],
+    *,
+    total: int,
+    label: str,
+    unit: str,
+    stats: dict[str, int],
+    print_every: int,
+) -> Iterator[Any]:
+    """Show a tqdm bar in terminals and periodic lines in redirected logs."""
+
+    if _is_interactive_terminal():
+        progress = tqdm(total=total, desc=label, unit=unit, dynamic_ncols=True)
+        try:
+            for item in items:
+                yield item
+                progress.update(1)
+                progress.set_postfix(
+                    queries=stats["queries"],
+                    cache=stats["cache_hits"],
+                    matched=stats["matched"],
+                    refresh=False,
+                )
+        finally:
+            progress.close()
+        return
+
+    for completed, item in enumerate(items, start=1):
+        yield item
+        if print_every > 0 and (completed % print_every == 0 or completed == total):
+            percent = 100.0 * completed / total if total else 100.0
+            print(
+                f"{label} progress: {completed}/{total} ({percent:.1f}%) | "
+                f"queries={stats['queries']}, cache={stats['cache_hits']}, "
+                f"matched={stats['matched']}",
+                flush=True,
+            )
+
+
+def _print_lookup_summary(label: str, total: int, stats: dict[str, int]) -> None:
+    print(
+        f"{label} complete: {total}/{total} | queries={stats['queries']}, "
+        f"cache={stats['cache_hits']}, matched={stats['matched']}",
+        flush=True,
+    )
+
+
 def query_opsin(iupac_name: str, session: requests.Session) -> dict[str, Any]:
     url = f"{OPSIN_BASE}/{quote(iupac_name, safe='')}.json"
     try:
@@ -220,6 +273,7 @@ def enrich_with_opsin(
     cache: LookupCache,
     session: requests.Session,
     delay: float,
+    progress_every: int = 50,
 ) -> tuple[pd.DataFrame, list[dict[str, Any]], dict[str, int]]:
     failures: list[dict[str, Any]] = []
     stats = {"queries": 0, "cache_hits": 0, "matched": 0,
@@ -231,7 +285,15 @@ def enrich_with_opsin(
     groups = candidates.groupby(candidates["IUPAC_Name"].map(normalize_query), sort=False)
 
     print(f"OPSIN: {len(candidates)} rows, {groups.ngroups} unique IUPAC names")
-    for iupac_name, rows in groups:
+    progress_groups = _progress_items(
+        groups,
+        total=groups.ngroups,
+        label="OPSIN",
+        unit="name",
+        stats=stats,
+        print_every=progress_every,
+    )
+    for iupac_name, rows in progress_groups:
         key = f"opsin:name:{iupac_name}"
         result, cached = _cached_lookup(
             cache, key, lambda name=iupac_name: query_opsin(name, session)
@@ -259,6 +321,7 @@ def enrich_with_opsin(
                 df.at[index, "Standard_InChIKey_Source"] = "OPSIN"
                 stats["inchikey_filled"] += 1
 
+    _print_lookup_summary("OPSIN", groups.ngroups, stats)
     cache.save()
     return df, failures, stats
 
@@ -284,6 +347,7 @@ def enrich_with_pubchem(
     delay: float,
     blocklist: set[str],
     minimum_name_length: int,
+    progress_every: int = 50,
 ) -> tuple[pd.DataFrame, list[dict[str, Any]], dict[str, int]]:
     failures: list[dict[str, Any]] = []
     stats = {"queries": 0, "cache_hits": 0, "matched": 0,
@@ -305,7 +369,15 @@ def enrich_with_pubchem(
         grouped.setdefault(triple, []).append(index)
 
     print(f"PubChem: {len(candidates)} rows, {len(grouped)} unique query triples")
-    for (compound_name, iupac_name, smiles), indices in grouped.items():
+    progress_groups = _progress_items(
+        grouped.items(),
+        total=len(grouped),
+        label="PubChem",
+        unit="compound",
+        stats=stats,
+        print_every=progress_every,
+    )
+    for (compound_name, iupac_name, smiles), indices in progress_groups:
         attempts: list[tuple[str, str]] = []
         if _usable_compound_name(compound_name, blocklist, minimum_name_length):
             attempts.append(("Compound_Name", compound_name))
@@ -348,6 +420,7 @@ def enrich_with_pubchem(
                     df.at[index, SOURCE_COLUMNS[value_column]] = "PUBCHEM"
                     stats[count_key] += 1
 
+    _print_lookup_summary("PubChem", len(grouped), stats)
     cache.save()
     return df, failures, stats
 
@@ -375,6 +448,7 @@ def run_post_processing(
     pubchem_delay: float = 0.3,
     minimum_name_length: int = 3,
     keep_source_provenance: bool = False,
+    progress_every: int = 50,
 ) -> dict[str, Any]:
     df = load_inputs(input_paths)
     input_rows = len(df)
@@ -402,7 +476,7 @@ def run_post_processing(
 
     if run_opsin:
         df, service_failures, service_stats["opsin"] = enrich_with_opsin(
-            df, cache, session, opsin_delay
+            df, cache, session, opsin_delay, progress_every
         )
         failures.extend(service_failures)
     if run_pubchem:
@@ -413,6 +487,7 @@ def run_post_processing(
             pubchem_delay,
             blocklist or set(DEFAULT_PUBCHEM_BLOCKLIST),
             minimum_name_length,
+            progress_every,
         )
         failures.extend(service_failures)
 
@@ -476,6 +551,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--opsin_delay", type=float, default=0.1)
     parser.add_argument("--pubchem_delay", type=float, default=0.3)
     parser.add_argument("--minimum_name_length", type=int, default=3)
+    parser.add_argument(
+        "--progress_every", type=int, default=50,
+        help=(
+            "When output is redirected, print progress every N unique lookups "
+            "(default: 50; use 0 to disable periodic lines)."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -505,6 +587,7 @@ def main() -> None:
         pubchem_delay=args.pubchem_delay,
         minimum_name_length=args.minimum_name_length,
         keep_source_provenance=args.keep_source_provenance,
+        progress_every=args.progress_every,
     )
 
 if __name__ == "__main__":

@@ -2292,18 +2292,18 @@ def clean_and_enrich_poi_from_uniprot(df_llm: pd.DataFrame, taxid_to_species: di
         fallback_info[(poi, org_id)] = info
         time.sleep(0.1)
 
-    def _get_field(row, field):
+    def _get_info(row):
         accession = _normalize_uniprot_accession(row.get("Degradation_Target_Uniprot"))
         if accession:
-            key = (row["Degradation_Target"], accession)
-            return poi_info.get(key, {}).get(field)
-        key = (row["Degradation_Target"], int(row["_taxonomy_id"]))
-        return fallback_info.get(key, {}).get(field)
-
-    df_llm["Degradation_Target_Gene"] = df_llm.apply(lambda r: _get_field(r, "gene"), axis=1)
-    df_llm["Degradation_Target_Uniprot"] = df_llm.apply(lambda r: _get_field(r, "uniprot"), axis=1)
-    df_llm["Degradation_Target_Uniprot_MutationID"] = df_llm.apply(lambda r: _get_field(r, "mutation_id"), axis=1)
-    df_llm["Degradation_Target_Sequence"] = df_llm.apply(lambda r: _get_field(r, "sequence"), axis=1)
+            return poi_info.get((row["Degradation_Target"], accession), {})
+        if pd.isna(row["Degradation_Target"]):
+            return {}
+        return fallback_info.get((row["Degradation_Target"], int(row["_taxonomy_id"])), {})
+    row_info = df_llm.apply(_get_info, axis=1)
+    df_llm["Degradation_Target_Gene"] = row_info.map(lambda info: info.get("gene"))
+    df_llm["Degradation_Target_Uniprot"] = row_info.map(lambda info: info.get("uniprot"))
+    df_llm["Degradation_Target_Uniprot_MutationID"] = row_info.map(lambda info: info.get("mutation_id"))
+    df_llm["Degradation_Target_Sequence"] = row_info.map(lambda info: info.get("sequence"))
 
     df_llm.drop(columns=["POI_raw", "POI_Name"], inplace=True, errors="ignore")
 
@@ -2775,7 +2775,10 @@ _MONTH_TO_NUMBER = {
 
 _DASH_TRANSLATION = str.maketrans({char: "-" for char in "‐‑‒–—―−﹣－"})
 _DC50_NUMBER = r"[0-9]+(?:\.[0-9]+)?(?:[eE][+-]?[0-9]+)?"
-_DC50_UNIT = r"(?:pM|nM|[uµμ]M|pmol/L|nmol/L|[uµμ]mol/L)"
+_DC50_UNIT = (
+    r"(?:fM|pM|nM|[uµμ]M|mM|M|"
+    r"fmol/L|pmol/L|nmol/L|[uµμ]mol/L|mmol/L|mol/L)"
+)
 _TILDE_CHARS = "∼≈≃≅～"
 
 _NO_VALUE = re.compile(
@@ -2863,16 +2866,36 @@ def _dc50_result(
 
 
 def _dc50_unit_factor_to_nm(unit: str | None) -> float | None:
-    if unit is None:
+    if unit is None or pd.isna(unit):
         return None
-    normalized = unit.strip().replace("µ", "u").replace("μ", "u").lower()
+    normalized = str(unit).strip().replace("µ", "u").replace("μ", "u").lower()
+    normalized = normalized.replace("⁻", "-").replace("−", "-").replace("¹", "1")
+    normalized = re.sub(r"\s+", "", normalized).replace(".", "")
     return {
+        "fm": 1e-6,
+        "fmol/l": 1e-6,
+        "fmoll-1": 1e-6,
+        "fmoll1": 1e-6,
         "pm": 1e-3,
         "pmol/l": 1e-3,
+        "pmoll-1": 1e-3,
+        "pmoll1": 1e-3,
         "nm": 1.0,
         "nmol/l": 1.0,
+        "nmoll-1": 1.0,
+        "nmoll1": 1.0,
         "um": 1e3,
         "umol/l": 1e3,
+        "umoll-1": 1e3,
+        "umoll1": 1e3,
+        "mm": 1e6,
+        "mmol/l": 1e6,
+        "mmoll-1": 1e6,
+        "mmoll1": 1e6,
+        "m": 1e9,
+        "mol/l": 1e9,
+        "moll-1": 1e9,
+        "moll1": 1e9,
     }.get(normalized)
 
 
@@ -3094,23 +3117,49 @@ def _normalize_numeric_series(series: pd.Series) -> pd.Series:
 def standardize_dc50(df_llm: pd.DataFrame, input_csv: str) -> pd.DataFrame:
     dc50_raw = pd.read_csv(input_csv, usecols=["DC50"])["DC50"]
     parsed = dc50_raw.apply(parse_dc50).apply(pd.Series)
+    for column in ("value", "range_min", "range_max"):
+        parsed[column] = pd.to_numeric(parsed[column], errors="coerce")
+    parsed["units"] = parsed["units"].astype("string")
+
+    parse_status = dc50_raw.map(lambda raw: _activity_parse_status("DC50", raw))
+    extracted_units = (
+        df_llm["DC50_units"].astype("string").str.strip()
+        if "DC50_units" in df_llm.columns
+        else pd.Series(pd.NA, index=df_llm.index, dtype="string")
+    )
+
+    # parse_dc50 standardizes units embedded in the value.  When extraction
+    # places the unit in the companion DC50_units column, apply the same
+    # conversion here so the standardized contract is identical in both cases.
+    has_parsed_value = parsed[["value", "range_min", "range_max"]].notna().any(axis=1)
+    needs_companion_unit = has_parsed_value & parsed["units"].isna()
+    companion_factors = extracted_units.map(_dc50_unit_factor_to_nm)
+    convertible = needs_companion_unit & companion_factors.notna()
+    if convertible.any():
+        for column in ("value", "range_min", "range_max"):
+            parsed.loc[convertible, column] = (
+                parsed.loc[convertible, column] * companion_factors.loc[convertible]
+            )
+        parsed.loc[convertible, "units"] = "nM"
+
+
+    not_convertible = needs_companion_unit & companion_factors.isna()
+    parsed.loc[not_convertible, ["value", "range_min", "range_max", "units"]] = pd.NA
+    parse_status.loc[not_convertible] = "recognised"
 
     df_llm["DC50"] = _normalize_numeric_series(parsed["value"])
     df_llm["DC50_operator"] = parsed["operator"]
     df_llm["DC50_range_min"] = _normalize_numeric_series(parsed["range_min"])
     df_llm["DC50_range_max"] = _normalize_numeric_series(parsed["range_max"])
-    df_llm["DC50_parse_status"] = dc50_raw.map(
-        lambda raw: _activity_parse_status("DC50", raw)
-    )
+    df_llm["DC50_parse_status"] = parse_status
 
-    extracted_units = (
-        df_llm["DC50_units"]
-        .astype("string")
-        .str.strip()
-        .replace({"nm": "nM", "nmol/L": "nM", "μM": "µM", "uM": "µM"})
-    )
+    standardized_value = parsed[["value", "range_min", "range_max"]].notna().any(axis=1)
+    df_llm["DC50_units"] = pd.Series(pd.NA, index=df_llm.index, dtype="string")
+    df_llm.loc[standardized_value, "DC50_units"] = "nM"
 
-    df_llm["DC50_units"] = parsed["units"].astype("string").fillna(extracted_units)
+    invalid_units = standardized_value & df_llm["DC50_units"].ne("nM")
+    if invalid_units.any():
+        raise AssertionError("standardize_dc50 produced a populated DC50 outside nM")
 
     dc50_h_raw = pd.read_csv(input_csv, usecols=["DC50_h"], dtype=str)["DC50_h"]
     dc50_h_parsed = dc50_h_raw.apply(parse_dc50_h)
@@ -3166,6 +3215,7 @@ def parse_dmax(raw) -> dict:
         lo = float(m.group(2))
         if m.group(3) is not None:
             hi = float(m.group(3))
+            lo, hi = sorted((lo, hi))
             return {"value": None, "operator": operator, "range_min": lo, "range_max": hi}
         return {"value": lo, "operator": operator, "range_min": None, "range_max": None}
 
