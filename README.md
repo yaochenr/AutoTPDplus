@@ -223,16 +223,11 @@ docs/              Project website
 ## Citation
 
 ```bibtex
-@misc{rao2026beyond,
-  title         = {Beyond Manual Curation: Augmenting Targeted Protein Degradation
-                   Databases via Agentic Literature Extraction Workflows},
-  author        = {Rao, Yaochen and Jalalypour, Farzaneh and
-                   Krishnan, N. M. Anoop and Mercado, Roc{\'i}o},
-  year          = {2026},
-  eprint        = {2605.11221},
-  archivePrefix = {arXiv},
-  primaryClass  = {q-bio.QM},
-  url           = {https://arxiv.org/abs/2605.11221}
+@article{rao2026beyond,
+  title={Beyond Manual Curation: Augmenting Targeted Protein Degradation Databases via Agentic Literature Extraction Workflows},
+  author={Rao, Yaochen and Jalalypour, Farzaneh and Krishnan, NM and Mercado, Rocío},
+  journal={arXiv preprint arXiv:2605.11221},
+  year={2026}
 }
 ```
 
