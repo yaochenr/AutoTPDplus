@@ -1,71 +1,80 @@
+"""Build docs/assets/molecules.json, the website background, from experimental PROTAC structures.
+
+Each SDF in data/protac_reference is a ligand from a PDB entry, named <pdb>_<chain>_<ligand>.sdf.
+Files that share a PDB ID are conformers of one molecule, so one is kept per entry. Heavy-atom
+coordinates are the deposited ones. Most depositions carry no hydrogens, so missing hydrogens are
+added and only those new atoms are relaxed.
+"""
 import json
-import random
+from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
-import pandas as pd
 from rdkit import Chem, RDLogger
 from rdkit.Chem import AllChem
 
 RDLogger.DisableLog("rdApp.*")
 
 ROOT = Path(__file__).resolve().parents[1]
-RELEASE = ROOT / "data" / "release"
+SDF_DIR = ROOT / "data" / "protac_reference"
 OUT = ROOT / "docs" / "assets" / "molecules.json"
 
-SEED = 7
-N_PROTAC, N_GLUE = 100, 50
 ANGSTROM_PER_UNIT = 1.5
 DOUBLE_OFFSET = 0.16
 QUANT = 50
+CLASH_VDW_FRACTION = 0.7
 
-ELEMENT_CLASS = {"C": 0, "N": 1, "O": 2, "S": 3, "P": 3, "F": 4, "Cl": 4, "Br": 4, "I": 4}
+ELEMENT_CLASS = {"C": 0, "N": 1, "O": 2, "S": 3, "P": 3, "F": 4, "Cl": 4, "Br": 4, "I": 4, "H": 6}
 
-
-def load_smiles(csv_name, min_heavy, max_heavy):
-    df = pd.read_csv(RELEASE / csv_name, usecols=["SMILES"]).dropna()
-    seen, out = set(), []
-    for smi in df["SMILES"].unique():
-        mol = Chem.MolFromSmiles(smi)
-        if mol is None or "." in smi:
-            continue
-        if not min_heavy <= mol.GetNumHeavyAtoms() <= max_heavy:
-            continue
-        key = Chem.MolToInchiKey(mol)[:14]
-        if key in seen:
-            continue
-        seen.add(key)
-        out.append(smi)
-    return out
-
-
-def specified_centres(mol):
-    return {
-        i: label
-        for i, label in Chem.FindMolChiralCenters(mol, useLegacyImplementation=False)
-        if mol.GetAtomWithIdx(i).GetChiralTag() != Chem.ChiralType.CHI_UNSPECIFIED
-    }
+# Ligands only partly modelled in the deposited structure (heavy atoms present / in the RCSB
+# chemical component), checked 2026-11-04. Adding hydrogens would cap the break as if it were
+# real chemistry. New SDFs need the same check before they are added.
+INCOMPLETE = {
+    "6wwb_E_YA3": (37, 61),
+    "8dsf_J_TO0": (38, 81),
+    "8dsf_L_TO0": (38, 81),
+    "8ood_J_VY3": (43, 58),
+    "8ood_K_VY3": (32, 58),
+    "8s75_I_A1H5L": (31, 69),
+    "8s75_L_A1H5L": (31, 69),
+    "8s76_C_A1H5M": (36, 72),
+    "9c5v_E_A1AUO": (60, 61),
+}
 
 
-def embed(smi, seed):
-    ref = Chem.MolFromSmiles(smi)
-    mol = Chem.AddHs(ref)
-    params = AllChem.ETKDGv3()
-    params.randomSeed = seed
-    if AllChem.EmbedMolecule(mol, params) != 0:
-        params.useRandomCoords = True
-        if AllChem.EmbedMolecule(mol, params) != 0:
-            return None
-    AllChem.MMFFOptimizeMolecule(mol, maxIters=1000)
-    mol = Chem.RemoveHs(mol)
-
-    want = specified_centres(ref)
-    probe = Chem.Mol(mol)
-    Chem.AssignStereochemistryFrom3D(probe)
-    got = dict(Chem.FindMolChiralCenters(probe, useLegacyImplementation=False))
-    if any(got.get(i) != label for i, label in want.items()):
-        return None
+def add_hydrogens(mol):
+    """Add missing hydrogens, moving only those atoms so deposited coordinates stay exact."""
+    n_deposited = mol.GetNumAtoms()
+    mol = Chem.AddHs(mol, addCoords=True)
+    props = AllChem.MMFFGetMoleculeProperties(mol)
+    if props is not None and mol.GetNumAtoms() > n_deposited:
+        ff = AllChem.MMFFGetMoleculeForceField(mol, props)
+        for i in range(n_deposited):
+            ff.AddFixedPoint(i)
+        ff.Initialize()
+        ff.Minimize(maxIts=2000)
     return mol
+
+
+def clash_count(mol):
+    """Atom pairs more than three bonds apart that sit well inside their van der Waals contact."""
+    pos = mol.GetConformer().GetPositions()
+    table = Chem.GetPeriodicTable()
+    radii = np.array([table.GetRvdw(a.GetAtomicNum()) for a in mol.GetAtoms()])
+    dist = np.linalg.norm(pos[:, None] - pos[None], axis=-1)
+    close = dist < CLASH_VDW_FRACTION * (radii[:, None] + radii[None])
+    return int(np.triu(close & (Chem.GetDistanceMatrix(mol) > 3), 1).sum())
+
+
+def load_conformers():
+    entries = defaultdict(list)
+    for path in sorted(SDF_DIR.glob("*.sdf")):
+        if path.stem in INCOMPLETE:
+            continue
+        pdb, _, ligand = path.stem.split("_")
+        mol = add_hydrogens(Chem.MolFromMolFile(str(path), removeHs=False))
+        entries[pdb].append((clash_count(mol), path.stem, ligand, mol))
+    return entries
 
 
 def wireframe(mol):
@@ -104,34 +113,28 @@ def quantize(arr):
 
 
 def main():
-    rng = random.Random(SEED)
-    pools = {
-        "protac": load_smiles("AutoTPDplus-PROTAC.csv", 35, 90),
-        "glue": load_smiles("AutoTPDplus-MG.csv", 15, 60),
-    }
-    wanted = {"protac": N_PROTAC, "glue": N_GLUE}
-
     molecules = []
-    for kind, pool in pools.items():
-        rng.shuffle(pool)
-        added = 0
-        for smi in pool:
-            if added == wanted[kind]:
-                break
-            mol = embed(smi, SEED)
-            if mol is None:
-                continue
-            segs, atoms, elements = wireframe(mol)
-            molecules.append(
-                {"kind": kind, "smiles": smi, "s": quantize(segs), "a": quantize(atoms), "e": elements}
-            )
-            added += 1
-        print(f"{kind}: {added} / {wanted[kind]} (pool {len(pool)})")
+    for pdb, conformers in sorted(load_conformers().items()):
+        clashes, source, ligand, mol = min(conformers, key=lambda c: c[:2])
+        smiles = Chem.MolToSmiles(Chem.RemoveHs(mol))
+        segs, atoms, elements = wireframe(mol)
+        molecules.append(
+            {
+                "pdb": pdb,
+                "ligand": ligand,
+                "source": source,
+                "smiles": smiles,
+                "s": quantize(segs),
+                "a": quantize(atoms),
+                "e": elements,
+            }
+        )
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps({"scale": QUANT, "molecules": molecules}, separators=(",", ":")))
     print(f"wrote {len(molecules)} molecules -> {OUT.relative_to(ROOT)} "
           f"({OUT.stat().st_size / 1024:.0f} KB)")
+
 
 if __name__ == "__main__":
     main()

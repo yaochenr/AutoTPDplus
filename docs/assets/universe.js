@@ -44,10 +44,10 @@ function resize() {
 const rand = (a, b) => a + Math.random() * (b - a);
 
 // Monochrome ball-and-stick: one shared low-poly sphere, shaded grey by element class
-// (C, N, O, S/P, halogen, other) and sized slightly larger for heteroatoms.
+// (C, N, O, S/P, halogen, other, H), sized slightly larger for heteroatoms and smaller for H.
 const atomGeometry = new THREE.IcosahedronGeometry(1, 1);
-const ELEMENT_GREY = [0.82, 0.5, 0.36, 0.28, 0.32, 0.42];
-const ELEMENT_RADIUS = [0.17, 0.21, 0.21, 0.24, 0.23, 0.22];
+const ELEMENT_GREY = [0.82, 0.5, 0.36, 0.28, 0.32, 0.42, 0.9];
+const ELEMENT_RADIUS = [0.17, 0.21, 0.21, 0.24, 0.23, 0.22, 0.1];
 const _m = new THREE.Matrix4(), _p = new THREE.Vector3(), _s = new THREE.Vector3(), _q = new THREE.Quaternion();
 const _c = new THREE.Color();
 
@@ -251,7 +251,7 @@ window.addEventListener('resize', () => { resize(); if (!running) renderer.rende
 reducedMotion.addEventListener('change', start);
 
 resize();
-fetch(new URL('molecules.json?v=3d-2', import.meta.url))
+fetch(new URL('molecules.json?v=3d-3', import.meta.url))
   .then((r) => r.json())
   .then((data) => {
     build(data);
