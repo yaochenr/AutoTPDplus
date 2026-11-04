@@ -12,7 +12,7 @@
 
 This repository implements an end-to-end agentic workflow for extracting structured targeted protein degradation (TPD) assay records from scientific literature. The workflow integrates literature retrieval, cross-validated prompt optimization, multi-pass LLM extraction, domain-specific standardization, evaluation against expert annotations, and continuous database maintenance.
 
-The implementation accompanies [*Beyond Manual Curation: Augmenting Targeted Protein Degradation Databases via Agentic Literature Extraction Workflows*](https://arxiv.org/abs/2605.11221) and produces two data resources: **AutoTPD**, the frozen dataset used for method evaluation, and **AutoTPD+**, a living database designed for continued literature-based updates. Both resources are available in this GitHub repository, through the [project website](https://yaochenr.github.io/LLM-TPD-Extraction/), and on [Hugging Face](https://huggingface.co/datasets/ailab-bio/AutoTPDplus).
+The implementation accompanies [*Agentic Literature Extraction Augments Targeted Protein Degradation Databases*](https://arxiv.org/abs/2605.11221) and produces two data resources: **AutoTPD**, the frozen dataset used for method evaluation, and **AutoTPD+**, a living database designed for continued literature-based updates. Both resources are available in this GitHub repository, through the [project website](https://yaochenr.github.io/LLM-TPD-Extraction/), and on [Hugging Face](https://huggingface.co/datasets/ailab-bio/AutoTPDplus).
 
 ## Pipeline
 
@@ -224,7 +224,7 @@ docs/              Project website
 
 ```bibtex
 @article{rao2026beyond,
-  title={Beyond Manual Curation: Augmenting Targeted Protein Degradation Databases via Agentic Literature Extraction Workflows},
+  title={Agentic Literature Extraction Augments Targeted Protein Degradation Databases},
   author={Rao, Yaochen and Jalalypour, Farzaneh and Krishnan, NM and Mercado, Rocío},
   journal={arXiv preprint arXiv:2605.11221},
   year={2026}
