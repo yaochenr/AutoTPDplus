@@ -4,7 +4,7 @@
 
 <p align="center">
   <a href="https://arxiv.org/abs/2605.11221"><img src="https://img.shields.io/badge/Paper-arXiv%3A2605.11221-b31b1b?logo=arxiv" alt="Paper"></a>
-  <a href="https://yaochenr.github.io/LLM-TPD-Extraction/"><img src="https://img.shields.io/badge/Project-Website-2a78d6" alt="Project website"></a>
+  <a href="https://yaochenr.github.io/AutoTPDplus/"><img src="https://img.shields.io/badge/Project-Website-2a78d6" alt="Project website"></a>
   <a href="https://huggingface.co/datasets/ailab-bio/AutoTPDplus"><img src="https://img.shields.io/badge/%F0%9F%A4%97-Hugging%20Face-ffd21e" alt="Hugging Face dataset"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/Code-MIT-555555" alt="MIT code license"></a>
   <a href="https://creativecommons.org/licenses/by/4.0/"><img src="https://img.shields.io/badge/Data-CC%20BY%204.0-6b8e23" alt="CC BY 4.0 data license"></a>
@@ -12,7 +12,7 @@
 
 This repository implements an end-to-end agentic workflow for extracting structured targeted protein degradation (TPD) assay records from scientific literature. The workflow integrates literature retrieval, cross-validated prompt optimization, multi-pass LLM extraction, domain-specific standardization, evaluation against expert annotations, and continuous database maintenance.
 
-The implementation accompanies [*Agentic Literature Extraction Augments Targeted Protein Degradation Databases*](https://arxiv.org/abs/2605.11221) and produces two data resources: **AutoTPD**, the frozen dataset used for method evaluation, and **AutoTPD+**, a living database designed for continued literature-based updates. Both resources are available in this GitHub repository, through the [project website](https://yaochenr.github.io/LLM-TPD-Extraction/), and on [Hugging Face](https://huggingface.co/datasets/ailab-bio/AutoTPDplus).
+The implementation accompanies [*Agentic Literature Extraction Augments Targeted Protein Degradation Databases*](https://arxiv.org/abs/2605.11221) and produces two data resources: **AutoTPD**, the frozen dataset used for method evaluation, and **AutoTPD+**, a living database designed for continued literature-based updates. Both resources are available in this GitHub repository, through the [project website](https://yaochenr.github.io/AutoTPDplus/), and on [Hugging Face](https://huggingface.co/datasets/ailab-bio/AutoTPDplus).
 
 ## Pipeline
 
@@ -56,7 +56,7 @@ The released records include standardized compound, target, recruiter, assay, ce
 | `AutoTPD-PROTAC.csv` | Frozen PROTAC benchmark | 714 |
 | `AutoTPD-MG.csv` | Frozen molecular glue benchmark | 246 |
 
-The data can be downloaded from [`data/release/`](data/release/), the [project website](https://yaochenr.github.io/LLM-TPD-Extraction/), or Hugging Face:
+The data can be downloaded from [`data/release/`](data/release/), the [project website](https://yaochenr.github.io/AutoTPDplus/), or Hugging Face:
 
 ```python
 from datasets import load_dataset
