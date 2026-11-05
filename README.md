@@ -223,11 +223,14 @@ docs/              Project website
 ## Citation
 
 ```bibtex
-@article{rao2026beyond,
-  title={Agentic Literature Extraction Augments Targeted Protein Degradation Databases},
-  author={Rao, Yaochen and Jalalypour, Farzaneh and Krishnan, NM and Mercado, Rocío},
-  journal={arXiv preprint arXiv:2605.11221},
-  year={2026}
+@misc{rao2026agenticliteratureextractionaugments,
+      title={Agentic Literature Extraction Augments Targeted Protein Degradation Databases}, 
+      author={Yaochen Rao and Farzaneh Jalalypour and N. M. Anoop Krishnan and Rocío Mercado},
+      year={2026},
+      eprint={2605.11221},
+      archivePrefix={arXiv},
+      primaryClass={q-bio.QM},
+      url={https://arxiv.org/abs/2605.11221}, 
 }
 ```
 
